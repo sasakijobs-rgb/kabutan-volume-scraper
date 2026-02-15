@@ -1,0 +1,2 @@
+gitのアドレス
+https://github.com/sasakijobs-rgb/kabutan-volume-scraper.git
