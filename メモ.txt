@@ -1,2 +1,8 @@
 gitのアドレス
 https://github.com/sasakijobs-rgb/kabutan-volume-scraper.git
+
+
+
+sasakijobs-rgb
+git config --global user.name "sasakijobs-rgb"
+git config --global user.email "sasaki.jobs@gmail.com"
