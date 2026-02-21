@@ -12,7 +12,7 @@ jobs:
     steps:
       # リポジトリ取得
       - name: Checkout repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       # Python セットアップ
       - name: Setup Python
@@ -34,7 +34,7 @@ jobs:
 
       # CSVをArtifactとして保存
       - name: Upload CSV
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: volume-ranking
           path: output/
