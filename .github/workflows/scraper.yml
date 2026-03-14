@@ -1,4 +1,4 @@
-name: Kabutan Volume Scraper
+name: Run Kabutan Volume Scraper
 
 on:
 schedule:
