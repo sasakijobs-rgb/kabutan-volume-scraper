@@ -37,7 +37,25 @@ today = datetime.now().strftime("%Y%m%d")
 filename = os.path.join(FOLDER, f"volume_ranking_{today}.csv")
 print(f"保存先: {filename}\n")
 
-# セッション
+# =========================
+# 先頭20行比較によるスキップ
+# =========================
+all_files = sorted(glob.glob(os.path.join(FOLDER, "volume_ranking_*.csv")))
+if all_files:
+    last_file = all_files[-1]  # 最新ファイル
+    try:
+        if os.path.exists(filename):
+            df_new_head = pd.read_csv(filename, encoding="utf-8-sig", nrows=20)
+            df_last_head = pd.read_csv(last_file, encoding="utf-8-sig", nrows=20)
+            if df_new_head.equals(df_last_head):
+                print(f"{filename} の先頭20行は前回ファイルと同じです。処理をスキップします。")
+                exit(0)
+    except Exception as e:
+        print(f"スキップチェック時エラー: {e}")
+
+# =========================
+# セッション準備
+# =========================
 session = requests.Session()
 session.headers.update(HEADERS)
 
@@ -110,7 +128,9 @@ for page_no in range(1, TOTAL_PAGES + 1):
 
 print(f"取得件数: {len(all_data)}\n")
 
+# =========================
 # CSV保存
+# =========================
 print("CSV保存中")
 with open(filename, "w", newline="", encoding="utf-8-sig") as f:
     writer = csv.writer(f)
@@ -121,7 +141,9 @@ with open(filename, "w", newline="", encoding="utf-8-sig") as f:
     writer.writerows(all_data)
 print("保存完了\n")
 
+# =========================
 # 古いファイル整理
+# =========================
 print("古いファイル整理")
 files = sorted(glob.glob(os.path.join(FOLDER, "volume_ranking_*.csv")))
 if len(files) > MAX_FILES:
@@ -133,7 +155,9 @@ else:
     print("削除なし")
 print()
 
+# =========================
 # CSV統合
+# =========================
 print("CSV統合中")
 df_list = []
 for f in files:
@@ -151,7 +175,9 @@ if df_list:
 else:
     print("統合するCSVなし")
 
+# =========================
 # 終了
+# =========================
 elapsed = time.time() - start_time
 print("\n===================================")
 print("処理完了")
