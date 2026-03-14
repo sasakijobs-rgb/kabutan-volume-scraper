@@ -2,8 +2,7 @@ name: Kabutan Volume Scraper
 
 on:
 schedule:
-#- cron: '0 7 * * *'   # 日本時間16:00
-- cron: '30 8 * * *'   # 日本時間17:30
+- cron: '0 7 * * *'   # 日本時間16:00
 workflow_dispatch:
 
 jobs:
