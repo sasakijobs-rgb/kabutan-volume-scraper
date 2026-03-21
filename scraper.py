@@ -1,14 +1,201 @@
 import os
+import time
+import random
+import csv
 from datetime import datetime
+import pandas as pd
+from selenium import webdriver
+from selenium.webdriver.chrome.service import Service
+from selenium.webdriver.chrome.options import Options
+from selenium.webdriver.common.by import By
+from webdriver_manager.chrome import ChromeDriverManager
+import glob
 
-# フォルダ作成
-os.makedirs("output", exist_ok=True)
+# =========================
+# 設定
+# =========================
+MAX_FILES = 150
+FOLDER = "output"
+TOTAL_PAGES = 2
+TOP_N = 3000
+BASE_URL = "https://s.kabutan.jp/warning/volume_ranking/"
 
-# ファイル作成
-filename = f"output/test_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv"
+os.makedirs(FOLDER, exist_ok=True)
 
-with open(filename, "w", encoding="utf-8") as f:
-    f.write("test,data\n")
-    f.write("ok,1\n")
+# 今日のファイル名
+today = datetime.now().strftime("%Y%m%d")
+filename = os.path.join(FOLDER, f"volume_ranking_{today}.csv")
+log_file = os.path.join(FOLDER, "volume_ranking.log")
 
-print("✅ test scraper success")
+def log(msg):
+    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    print(f"{timestamp} {msg}")
+    with open(log_file, "a", encoding="utf-8") as f:
+        f.write(f"{timestamp} {msg}\n")
+
+# =========================
+# Seleniumセットアップ
+# =========================
+options = Options()
+options.add_argument("--headless")
+options.add_argument("--no-sandbox")
+options.add_argument("--disable-dev-shm-usage")
+options.add_argument("--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64)")
+
+driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=options)
+
+# =========================
+# 重複チェック用: 前回最新ファイルの先頭20件
+# =========================
+prev_files = sorted(glob.glob(os.path.join(FOLDER, "volume_ranking_????????.csv")))
+prev_file = prev_files[-1] if prev_files else None
+prev_head20 = []
+
+if prev_file:
+    df_prev = pd.read_csv(prev_file, encoding="shift_jis")
+    df_prev = df_prev.head(20).astype(str).applymap(lambda x: x.replace(",", "").strip())
+    prev_head20 = df_prev.values.tolist()
+    log(f"比較ファイル: {os.path.basename(prev_file)}")
+else:
+    log("比較ファイル: なし")
+
+# =========================
+# CSVヘッダー作成
+# =========================
+with open(filename, "w", newline="", encoding="shift_jis") as f:
+    writer = csv.writer(f)
+    writer.writerow([
+        "No","コード","銘柄名","市場","株価","前日比","前日比(%)",
+        "出来高","PER","PBR","利回り","売買金額"
+    ])
+
+rank = 1
+start_time = datetime.now()
+log(f"開始 {start_time.strftime('%H:%M:%S')}")
+
+try:
+    for page_no in range(1, TOTAL_PAGES + 1):
+        page_str = f"{page_no:03d}/{TOTAL_PAGES:03d}"
+        log(page_str)
+        url = BASE_URL if page_no == 1 else f"{BASE_URL}?page={page_no}"
+        driver.get(url)
+        time.sleep(2 + random.random())
+
+        rows = driver.find_elements(By.CSS_SELECTOR, "tr")
+        if not rows:
+            raise Exception(f"データ取得失敗: 行が見つかりません - {url}")
+
+        for row in rows:
+            try:
+                code_market = row.find_elements(By.CSS_SELECTOR, "th a div.flex")
+                name_elem = row.find_elements(By.CSS_SELECTOR, "th a p")
+                if not code_market or not name_elem:
+                    continue
+
+                code = code_market[0].text.split()[0].strip()
+                market_span = row.find_elements(By.CSS_SELECTOR, "th a div.flex span")
+                market = market_span[0].text.strip() if market_span else ""
+                name = name_elem[0].text.strip()
+
+                tds = row.find_elements(By.TAG_NAME, "td")
+                if len(tds) < 7:
+                    continue
+
+                price = tds[0].text.strip()
+                prev_text = tds[1].text.split("\n")
+                prev_diff = prev_text[0].strip()
+                prev_diff_percent = prev_text[1].strip() if len(prev_text) > 1 else ""
+                volume = tds[2].text.strip().replace("株", "").replace(",", "")
+                per = tds[4].text.strip().replace("倍", "")
+                pbr = tds[5].text.strip().replace("倍", "")
+                yield_ = tds[6].text.strip().replace("%", "")
+
+                # 売買金額計算 (株価 × 出来高)
+                try:
+                    price_num = float(price.replace(",", ""))
+                    volume_num = float(volume)
+                    trade_amount = int(price_num * volume_num)
+                except:
+                    trade_amount = 0
+
+                record = [
+                    rank, code, name, market, price, prev_diff, prev_diff_percent,
+                    volume, per, pbr, yield_, trade_amount
+                ]
+
+                # 1ページ目で重複チェック
+                if page_no == 1 and prev_head20:
+                    current_head20 = [
+                        [
+                            code, name, market, price, prev_diff, prev_diff_percent,
+                            volume, per, pbr, yield_
+                        ]
+                    ]
+                    current_head20 = [
+                        [str(x).replace(",", "").strip() for x in r] for r in prev_head20
+                    ]
+                    # 前回の先頭20件と今回20件を比較
+                    if current_head20 == prev_head20:
+                        log("重複の為、中断しました")
+                        driver.quit()
+                        exit(0)
+
+                with open(filename, "a", newline="", encoding="shift_jis") as f:
+                    writer = csv.writer(f)
+                    writer.writerow(record)
+
+                rank += 1
+                if rank > TOP_N:
+                    break
+
+            except Exception as e:
+                log(f"データ取得エラー: {e}")
+                driver.quit()
+                exit(1)
+
+        if rank > TOP_N:
+            break
+
+except Exception as e:
+    log(f"処理中断: {e}")
+    driver.quit()
+    exit(1)
+
+driver.quit()
+
+# =========================
+# 処理終了
+# =========================
+end_time = datetime.now()
+delta_sec = int((end_time - start_time).total_seconds())
+log(f"終了 {end_time.strftime('%H:%M:%S')} (処理時間：{delta_sec}秒)")
+
+# =========================
+# 古いファイル削除
+# =========================
+all_files = sorted(glob.glob(os.path.join(FOLDER, "volume_ranking_*.csv")))
+if len(all_files) > MAX_FILES:
+    for f in all_files[:-MAX_FILES]:
+        try:
+            os.remove(f)
+        except Exception as e:
+            log(f"削除失敗: {f} ({e})")
+
+# =========================
+# マージファイル作成
+# =========================
+df_list = []
+for f in sorted(glob.glob(os.path.join(FOLDER, "volume_ranking_*.csv"))):
+    df = pd.read_csv(f, encoding="shift_jis")
+    df.insert(0, "日付", f.split("_")[-1].replace(".csv",""))
+    df_list.append(df)
+
+df_all = pd.concat(df_list, ignore_index=True)
+
+# CSV出力時にカンマを付ける（表示用）
+for col in ["出来高", "売買金額"]:
+    df_all[col] = df_all[col].apply(lambda x: f"{int(x):,}" if pd.notna(x) else x)
+
+merged_filename = os.path.join(FOLDER, "volume_ranking_merged.csv")
+df_all.to_csv(merged_filename, index=False, encoding="shift_jis")
+log(f"結合完了: {merged_filename}")
