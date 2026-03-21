@@ -6,24 +6,32 @@ on:
   schedule:
     - cron: "0 7 * * *"  # UTCで16:00 JST
 
+# Node.js 24 対応の環境変数を設定（安全のため）
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
 jobs:
   scrape:
     runs-on: ubuntu-latest
 
     steps:
+      # 最新版 checkout
       - name: Checkout repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
+      # 最新版 setup-python
       - name: Set up Python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
           python-version: 3.11
 
+      # 依存関係インストール
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
           pip install selenium pandas webdriver-manager
 
+      # Chrome インストール
       - name: Install Chrome
         run: |
           sudo apt update
@@ -31,10 +39,11 @@ jobs:
           wget https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb
           sudo apt install -y ./google-chrome-stable_current_amd64.deb
 
+      # スクレイパー実行
       - name: Run scraper
-        run: |
-          python scraper.py
+        run: python scraper.py
 
+      # 出力をアップロード
       - name: Upload output folder
         uses: actions/upload-artifact@v4
         with:
