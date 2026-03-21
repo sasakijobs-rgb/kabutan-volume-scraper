@@ -31,7 +31,9 @@ def log(msg):
     with open(log_file, "a", encoding="utf-8") as f:
         f.write(f"{timestamp} {msg}\n")
 
+# =========================
 # 前回比較ファイル
+# =========================
 first_page_file = os.path.join(FOLDER, "first_page20_before.csv")
 if os.path.exists(first_page_file):
     prev_head20 = open(first_page_file, "r", encoding="utf-8").read().splitlines()
@@ -40,11 +42,15 @@ else:
     prev_head20 = []
     log("比較ファイル: なし")
 
-# 今日のCSV
+# =========================
+# 今日のCSVファイル名
+# =========================
 today = datetime.now().strftime("%Y%m%d")
 filename = os.path.join(FOLDER, f"volume_ranking_{today}.csv")
 
+# =========================
 # Seleniumセットアップ
+# =========================
 options = Options()
 options.add_argument("--headless")
 options.add_argument("--no-sandbox")
@@ -167,7 +173,7 @@ end_time = datetime.now()
 delta_sec = int((end_time - start_time).total_seconds())
 log(f"【データ取得 終了】 (処理時間：{delta_sec}秒)")
 
-# 古いCSV削除
+# 古いCSV削除（150ファイル保持）
 all_files = sorted(glob.glob(os.path.join(FOLDER, "volume_ranking_*.csv")))
 if len(all_files) > MAX_FILES:
     for f in all_files[:-MAX_FILES]:
