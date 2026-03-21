@@ -24,7 +24,7 @@ BASE_URL = "https://s.kabutan.jp/warnings/volume_ranking/?market=all"
 os.makedirs(FOLDER, exist_ok=True)
 
 # =========================
-# ログ
+# ログ関数
 # =========================
 log_file = os.path.join(FOLDER, "volume_ranking.log")
 def log(msg):
@@ -34,7 +34,7 @@ def log(msg):
         f.write(f"{timestamp} {msg}\n")
 
 # =========================
-# 前回比較
+# 前回比較ファイル
 # =========================
 first_page_file = os.path.join(FOLDER, "first_page20_before.csv")
 if os.path.exists(first_page_file):
@@ -45,13 +45,13 @@ else:
     log("比較ファイル: なし")
 
 # =========================
-# 今日のCSV
+# 今日のCSVファイル名
 # =========================
 today = datetime.now().strftime("%Y%m%d")
 filename = os.path.join(FOLDER, f"volume_ranking_{today}.csv")
 
 # =========================
-# Selenium
+# Seleniumセットアップ
 # =========================
 options = Options()
 options.add_argument("--headless")
@@ -68,12 +68,9 @@ try:
     driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=options)
 
     # =========================
-    # 日次CSV（BOM強制）
+    # 日次CSV
     # =========================
-    with open(filename, "wb") as f:
-        f.write(b'\xef\xbb\xbf')
-
-    with open(filename, "a", newline="", encoding="utf-8") as f:
+    with open(filename, "w", newline="", encoding="utf-8") as f:
         writer = csv.writer(f)
         writer.writerow([
             "No","コード","銘柄名","市場","株価","前日比","前日比(%)",
@@ -111,38 +108,44 @@ try:
                     sys.exit(0)
 
             try:
-                name = row.find_elements(By.CSS_SELECTOR, "th a p, th a abbr")[0].text.strip()
+                # 銘柄名取得（空行や広告行はスキップ）
+                name_elem = row.find_elements(By.CSS_SELECTOR, "th a p, th a abbr")
+                if not name_elem:
+                    continue
+                name = name_elem[0].text.strip()
 
+                # 株コード・市場
                 code, market = "", ""
                 code_market = row.find_elements(By.CSS_SELECTOR, "th a div.flex")
                 if code_market:
                     parts = code_market[0].text.split()
                     if len(parts) >= 1:
-                        code = parts[0]
+                        code = parts[0].strip()
                     if len(parts) >= 2:
-                        market = parts[1]
+                        market = parts[1].strip()
 
+                # td取得
                 tds = row.find_elements(By.TAG_NAME, "td")
                 if len(tds) < 7:
                     continue
 
                 price = tds[0].text.strip()
                 prev_text = tds[1].text.split("\n")
-                prev_diff = prev_text[0].strip()
+                prev_diff = prev_text[0].strip() if len(prev_text) > 0 else ""
                 prev_diff_percent = prev_text[1].replace("%","").strip() if len(prev_text) > 1 else ""
 
-                # 単位削除
                 volume = tds[2].text.replace("株","").replace(",","").strip()
                 per = tds[4].text.replace("倍","").strip()
                 pbr = tds[5].text.replace("倍","").strip()
                 yield_ = tds[6].text.replace("%","").strip()
 
-                # 売買金額
+                # 売買金額計算
                 try:
                     trade_amount = int(float(price.replace(",","")) * float(volume))
                 except:
                     trade_amount = 0
 
+                # CSV書き込み
                 with open(filename, "a", newline="", encoding="utf-8") as f:
                     writer = csv.writer(f)
                     writer.writerow([
@@ -156,6 +159,7 @@ try:
 
             except Exception as e:
                 log(f"エラー: {e}")
+                continue
 
         if rank > TOP_N:
             break
@@ -169,7 +173,7 @@ finally:
         log("ブラウザ終了")
 
 # =========================
-# 比較ファイル保存（変更なし）
+# first_page20_before.csv 保存（取得データ1ページ目そのまま）
 # =========================
 with open(first_page_file, "w", encoding="utf-8") as f:
     for line in first_page_rows_text[:20]:
@@ -187,27 +191,21 @@ if len(all_files) > MAX_FILES:
             log(f"削除失敗: {e}")
 
 # =========================
-# merged（BOM強制）
+# mergedファイル作成
 # =========================
 merge_files = [f for f in sorted(glob.glob(os.path.join(FOLDER, "volume_ranking_*.csv")))
                if "merged" not in f]
 
 df_list = []
 for f in merge_files:
-    df = pd.read_csv(f, encoding="utf-8-sig")
+    df = pd.read_csv(f, encoding="utf-8")
     df.insert(0, "日付", f.split("_")[-1].replace(".csv",""))
     df_list.append(df)
 
 if df_list:
     df_all = pd.concat(df_list, ignore_index=True)
     merged_filename = os.path.join(FOLDER, "volume_ranking_merged.csv")
-
-    with open(merged_filename, "wb") as f:
-        f.write(b'\xef\xbb\xbf')
-
-    with open(merged_filename, "a", newline="", encoding="utf-8") as f:
-        df_all.to_csv(f, index=False)
-
+    df_all.to_csv(merged_filename, index=False, encoding="utf-8")
     log(f"結合完了: {merged_filename}")
 
 # =========================
