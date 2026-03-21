@@ -16,14 +16,16 @@ import sys
 # 設定
 # =========================
 MAX_FILES = 150
-FOLDER = os.path.join(os.getcwd(), "output")  # 絶対パスに変更
+FOLDER = os.path.join(os.getcwd(), "output")
 TOTAL_PAGES = 25
 TOP_N = 3000
 BASE_URL = "https://s.kabutan.jp/warnings/volume_ranking/?market=all"
 
 os.makedirs(FOLDER, exist_ok=True)
 
+# =========================
 # ログ関数
+# =========================
 log_file = os.path.join(FOLDER, "volume_ranking.log")
 def log(msg):
     timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
@@ -65,19 +67,20 @@ log("【データ取得 開始】")
 try:
     driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=options)
 
-    # CSVヘッダー作成
+    # =========================
+    # CSVヘッダー
+    # =========================
     with open(filename, "w", newline="", encoding="utf-8-sig") as f:
         writer = csv.writer(f)
         writer.writerow([
             "No","コード","銘柄名","市場","株価","前日比","前日比(%)",
-            "出来高","PER","PBR","利回り","売買金額"
+            "出来高(株)","PER(倍)","PBR(倍)","利回り(%)","売買金額"
         ])
 
     first_page_rows_text = []
 
     for page_no in range(1, TOTAL_PAGES + 1):
-        page_str = f"{page_no:03d}/{TOTAL_PAGES:03d}"
-        log(page_str)
+        log(f"{page_no:03d}/{TOTAL_PAGES:03d}")
         url = BASE_URL if page_no == 1 else f"{BASE_URL}&page={page_no}"
 
         try:
@@ -88,12 +91,14 @@ try:
 
         time.sleep(2 + random.random())
         rows = driver.find_elements(By.CSS_SELECTOR, "tbody tr")
+
         if not rows:
             log(f"データ取得警告: 行が見つかりません - {url}")
             continue
 
         for i, row in enumerate(rows):
             row_text = row.text.replace("\n", " ").strip()
+
             if page_no == 1 and i < 20:
                 first_page_rows_text.append(row_text)
 
@@ -103,11 +108,13 @@ try:
                     sys.exit(0)
 
             try:
+                # 銘柄名
                 name_elem = row.find_elements(By.CSS_SELECTOR, "th a p, th a abbr")
                 if not name_elem:
                     continue
                 name = name_elem[0].text.strip()
 
+                # コード・市場
                 code_market_div = row.find_elements(By.CSS_SELECTOR, "th a div.flex")
                 code, market = "", ""
                 if code_market_div:
@@ -120,17 +127,21 @@ try:
                     continue
 
                 price = tds[0].text.strip()
+
                 prev_text = tds[1].text.split("\n")
                 prev_diff = prev_text[0].strip()
                 prev_diff_percent = prev_text[1].replace("%","").strip() if len(prev_text) > 1 else ""
-                volume = tds[2].text.strip()
-                per = tds[4].text.strip()
-                pbr = tds[5].text.strip()
-                yield_ = tds[6].text.strip()
 
+                # 👇 単位除去
+                volume = tds[2].text.strip().replace("株", "").replace(",", "")
+                per = tds[4].text.strip().replace("倍", "")
+                pbr = tds[5].text.strip().replace("倍", "")
+                yield_ = tds[6].text.strip().replace("%", "")
+
+                # 売買金額
                 try:
                     price_num = float(price.replace(",",""))
-                    volume_num = float(volume.replace(",","").replace("株",""))
+                    volume_num = float(volume)
                     trade_amount = int(price_num * volume_num)
                 except:
                     trade_amount = 0
@@ -163,17 +174,23 @@ finally:
         driver.quit()
         log("ブラウザ終了")
 
-# first_page20_before.csv 保存
+# =========================
+# 前回比較保存
+# =========================
 with open(first_page_file, "w", encoding="utf-8") as f:
     for line in first_page_rows_text[:20]:
         f.write(line + "\n")
 
-# 処理終了ログ
+# =========================
+# 終了ログ
+# =========================
 end_time = datetime.now()
 delta_sec = int((end_time - start_time).total_seconds())
 log(f"【データ取得 終了】 (処理時間：{delta_sec}秒)")
 
-# 古いCSV削除（150ファイル保持）
+# =========================
+# 古いCSV削除（150日保持）
+# =========================
 all_files = sorted(glob.glob(os.path.join(FOLDER, "volume_ranking_*.csv")))
 if len(all_files) > MAX_FILES:
     for f in all_files[:-MAX_FILES]:
@@ -182,7 +199,9 @@ if len(all_files) > MAX_FILES:
         except Exception as e:
             log(f"削除失敗: {f} ({e})")
 
-# マージファイル作成
+# =========================
+# マージファイル
+# =========================
 merge_files = [f for f in sorted(glob.glob(os.path.join(FOLDER, "volume_ranking_*.csv")))
                if "merged" not in f and "first_page20_before.csv" not in f]
 
