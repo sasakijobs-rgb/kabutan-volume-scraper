@@ -56,37 +56,42 @@ options.add_argument("--headless")
 options.add_argument("--no-sandbox")
 options.add_argument("--disable-dev-shm-usage")
 options.add_argument("--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64)")
-driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=options)
+driver = None
 
-# =========================
-# CSVヘッダー作成
-# =========================
-with open(filename, "w", newline="", encoding="utf-8-sig") as f:
-    writer = csv.writer(f)
-    writer.writerow([
-        "No","コード","銘柄名","市場","株価","前日比","前日比(%)",
-        "出来高","PER","PBR","利回り","売買金額"
-    ])
-
-rank = 1
 start_time = datetime.now()
+rank = 1
 log("【データ取得 開始】")
 
 try:
+    driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=options)
+
+    # CSVヘッダー作成
+    with open(filename, "w", newline="", encoding="utf-8-sig") as f:
+        writer = csv.writer(f)
+        writer.writerow([
+            "No","コード","銘柄名","市場","株価","前日比","前日比(%)",
+            "出来高","PER","PBR","利回り","売買金額"
+        ])
+
     first_page_rows_text = []
 
     for page_no in range(1, TOTAL_PAGES + 1):
         page_str = f"{page_no:03d}/{TOTAL_PAGES:03d}"
         log(page_str)
         url = BASE_URL if page_no == 1 else f"{BASE_URL}&page={page_no}"
-        driver.get(url)
+
+        try:
+            driver.get(url)
+        except Exception as e:
+            log(f"ページ取得エラー: {url} ({e})")
+            continue
+
         time.sleep(2 + random.random())
 
         rows = driver.find_elements(By.CSS_SELECTOR, "tbody tr")
         if not rows:
-            log(f"データ取得失敗: 行が見つかりません - {url}")
-            driver.quit()
-            sys.exit(1)
+            log(f"データ取得警告: 行が見つかりません - {url}")
+            continue
 
         for i, row in enumerate(rows):
             row_text = row.text.replace("\n", " ").strip()
@@ -94,10 +99,9 @@ try:
                 first_page_rows_text.append(row_text)
 
             if page_no == 1 and i < 20 and prev_head20:
-                # 重複チェック
                 if row_text == prev_head20[i]:
-                    log("前回と同じデータのため処理を中断します。")
-                    driver.quit()
+                    log("前回と同じデータのため処理を中断します（正常終了）")
+                    # 終了コード0で正常終了
                     sys.exit(0)
 
             try:
@@ -112,10 +116,8 @@ try:
                 code, market = "", ""
                 if code_market_div:
                     parts = code_market_div[0].text.split()
-                    if len(parts) >= 1:
-                        code = parts[0].strip()
-                    if len(parts) >= 2:
-                        market = parts[1].strip()
+                    code = parts[0].strip() if len(parts) >= 1 else ""
+                    market = parts[1].strip() if len(parts) >= 2 else ""
 
                 tds = row.find_elements(By.TAG_NAME, "td")
                 if len(tds) < 7:
@@ -153,22 +155,21 @@ try:
 
             except Exception as e:
                 log(f"データ取得エラー: {e}")
-                driver.quit()
-                sys.exit(1)
+                continue  # 続行
 
         if rank > TOP_N:
             break
 
 except Exception as e:
-    log(f"処理中断: {e}")
-    driver.quit()
-    sys.exit(1)
+    log(f"処理中断例外: {e}")
 
-driver.quit()
-log("ブラウザ終了")
+finally:
+    if driver:
+        driver.quit()
+        log("ブラウザ終了")
 
 # =========================
-# first_page20_before.csv 保存（取得データ1ページ目そのまま）
+# first_page20_before.csv 保存（取得データ1ページ目）
 # =========================
 with open(first_page_file, "w", encoding="utf-8") as f:
     for line in first_page_rows_text[:20]:
