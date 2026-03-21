@@ -16,7 +16,7 @@ import sys
 # 設定
 # =========================
 MAX_FILES = 150
-FOLDER = "output"
+FOLDER = os.path.join(os.getcwd(), "output")  # 絶対パスに変更
 TOTAL_PAGES = 25
 TOP_N = 3000
 BASE_URL = "https://s.kabutan.jp/warnings/volume_ranking/?market=all"
@@ -31,9 +31,7 @@ def log(msg):
     with open(log_file, "a", encoding="utf-8") as f:
         f.write(f"{timestamp} {msg}\n")
 
-# =========================
 # 前回比較ファイル
-# =========================
 first_page_file = os.path.join(FOLDER, "first_page20_before.csv")
 if os.path.exists(first_page_file):
     prev_head20 = open(first_page_file, "r", encoding="utf-8").read().splitlines()
@@ -42,15 +40,11 @@ else:
     prev_head20 = []
     log("比較ファイル: なし")
 
-# =========================
-# 今日のCSVファイル名
-# =========================
+# 今日のCSV
 today = datetime.now().strftime("%Y%m%d")
 filename = os.path.join(FOLDER, f"volume_ranking_{today}.csv")
 
-# =========================
 # Seleniumセットアップ
-# =========================
 options = Options()
 options.add_argument("--headless")
 options.add_argument("--no-sandbox")
@@ -87,7 +81,6 @@ try:
             continue
 
         time.sleep(2 + random.random())
-
         rows = driver.find_elements(By.CSS_SELECTOR, "tbody tr")
         if not rows:
             log(f"データ取得警告: 行が見つかりません - {url}")
@@ -101,17 +94,14 @@ try:
             if page_no == 1 and i < 20 and prev_head20:
                 if row_text == prev_head20[i]:
                     log("前回と同じデータのため処理を中断します（正常終了）")
-                    # 終了コード0で正常終了
                     sys.exit(0)
 
             try:
-                # 銘柄名
                 name_elem = row.find_elements(By.CSS_SELECTOR, "th a p, th a abbr")
                 if not name_elem:
                     continue
                 name = name_elem[0].text.strip()
 
-                # 株コード・市場
                 code_market_div = row.find_elements(By.CSS_SELECTOR, "th a div.flex")
                 code, market = "", ""
                 if code_market_div:
@@ -132,7 +122,6 @@ try:
                 pbr = tds[5].text.strip()
                 yield_ = tds[6].text.strip()
 
-                # 売買金額計算
                 try:
                     price_num = float(price.replace(",",""))
                     volume_num = float(volume.replace(",","").replace("株",""))
@@ -155,7 +144,7 @@ try:
 
             except Exception as e:
                 log(f"データ取得エラー: {e}")
-                continue  # 続行
+                continue
 
         if rank > TOP_N:
             break
@@ -168,23 +157,17 @@ finally:
         driver.quit()
         log("ブラウザ終了")
 
-# =========================
-# first_page20_before.csv 保存（取得データ1ページ目）
-# =========================
+# first_page20_before.csv 保存
 with open(first_page_file, "w", encoding="utf-8") as f:
     for line in first_page_rows_text[:20]:
         f.write(line + "\n")
 
-# =========================
 # 処理終了ログ
-# =========================
 end_time = datetime.now()
 delta_sec = int((end_time - start_time).total_seconds())
 log(f"【データ取得 終了】 (処理時間：{delta_sec}秒)")
 
-# =========================
 # 古いCSV削除
-# =========================
 all_files = sorted(glob.glob(os.path.join(FOLDER, "volume_ranking_*.csv")))
 if len(all_files) > MAX_FILES:
     for f in all_files[:-MAX_FILES]:
@@ -193,9 +176,7 @@ if len(all_files) > MAX_FILES:
         except Exception as e:
             log(f"削除失敗: {f} ({e})")
 
-# =========================
 # マージファイル作成
-# =========================
 merge_files = [f for f in sorted(glob.glob(os.path.join(FOLDER, "volume_ranking_*.csv")))
                if "merged" not in f and "first_page20_before.csv" not in f]
 
