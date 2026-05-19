@@ -40,152 +40,242 @@ options.add_argument(
 # =========================
 # Chrome起動
 # =========================
-print("Chrome起動")
+print("Chrome起動開始")
 
 driver = webdriver.Chrome(options=options)
 
-# =========================
-# ページ取得
-# =========================
-print("ページ取得開始")
+try:
 
-driver.get(url)
+    # =========================
+    # ページ取得
+    # =========================
+    print("ページアクセス開始")
 
-time.sleep(5)
+    driver.get(url)
 
-print("ページタイトル:", driver.title)
+    time.sleep(5)
 
-# =========================
-# 行取得
-# =========================
-rows = driver.find_elements(By.CSS_SELECTOR, "tbody tr")
+    print("ページタイトル:")
+    print(driver.title)
 
-print("取得行数:", len(rows))
+    # =========================
+    # HTML確認
+    # =========================
+    print("=" * 50)
+    print("HTML先頭1000文字")
 
-data = []
+    html = driver.page_source
 
-# =========================
-# データ取得
-# =========================
-for row in rows:
+    print(html[:1000])
 
-    try:
+    # =========================
+    # tbody確認
+    # =========================
+    print("=" * 50)
 
-        # =========================
-        # 銘柄名取得
-        # =========================
-        name_elem = row.find_elements(
-            By.CSS_SELECTOR,
-            "th a p, th a abbr"
-        )
+    tbodies = driver.find_elements(By.TAG_NAME, "tbody")
 
-        if not name_elem:
-            continue
+    print("tbody数:", len(tbodies))
 
-        name = name_elem[0].text.strip()
+    # =========================
+    # 全行取得
+    # =========================
+    all_rows = driver.find_elements(By.CSS_SELECTOR, "tbody tr")
 
-        # =========================
-        # コード・市場取得
-        # =========================
-        code = ""
-        market = ""
+    print("=" * 50)
+    print("全tr数:", len(all_rows))
 
-        code_market = row.find_elements(
-            By.CSS_SELECTOR,
-            "th a div.flex"
-        )
+    # =========================
+    # ランキング行のみ抽出
+    # =========================
+    rows = []
 
-        if code_market:
+    for row in all_rows:
 
-            parts = code_market[0].text.split()
+        ths = row.find_elements(By.TAG_NAME, "th")
 
-            if len(parts) >= 1:
-                code = parts[0].strip()
+        # thがある行だけ
+        if ths:
+            rows.append(row)
 
-            if len(parts) >= 2:
-                market = parts[1].strip()
+    print("=" * 50)
+    print("ランキング行数:", len(rows))
 
-        # =========================
-        # td取得
-        # =========================
+    # =========================
+    # デバッグ表示
+    # =========================
+    for i, row in enumerate(rows[:3]):
+
+        print("=" * 50)
+        print(f"ランキング row[{i}] text")
+
+        print(row.text)
+
+        print("-" * 30)
+
+        ths = row.find_elements(By.TAG_NAME, "th")
         tds = row.find_elements(By.TAG_NAME, "td")
 
-        if len(tds) < 7:
-            continue
+        print("th数:", len(ths))
+        print("td数:", len(tds))
 
-        price = tds[0].text.strip()
+        for j, th in enumerate(ths):
+            print(f"th[{j}] = [{th.text}]")
 
-        # 前日比
-        diff_parts = tds[1].text.split("\n")
+        for j, td in enumerate(tds):
+            print(f"td[{j}] = [{td.text}]")
 
-        diff = diff_parts[0].strip() if len(diff_parts) > 0 else ""
-        diff_percent = diff_parts[1].strip() if len(diff_parts) > 1 else ""
+    # =========================
+    # データ取得
+    # =========================
+    data = []
 
-        trading_value = tds[3].text.strip()
-        per = tds[4].text.strip()
-        pbr = tds[5].text.strip()
-        dividend = tds[6].text.strip()
+    for row in rows:
 
-        print(
-            code,
-            name,
-            market,
-            price,
-            diff,
-            diff_percent,
-            trading_value,
-            per,
-            pbr,
-            dividend
-        )
+        try:
 
-        # =========================
-        # 保存
-        # =========================
-        data.append([
-            code,
-            name,
-            market,
-            price,
-            diff,
-            diff_percent,
-            trading_value,
-            per,
-            pbr,
-            dividend
+            # =========================
+            # th取得
+            # =========================
+            ths = row.find_elements(By.TAG_NAME, "th")
+
+            if not ths:
+                continue
+
+            th = ths[0]
+
+            # 改行維持
+            lines = [
+                x.strip()
+                for x in th.text.split("\n")
+                if x.strip()
+            ]
+
+            print("=" * 50)
+            print("th lines:")
+            print(lines)
+
+            # =========================
+            # コード・銘柄名・市場
+            # =========================
+            code = ""
+            name = ""
+            market = ""
+
+            # 想定:
+            # ['285A', 'キオクシア', '東Ｐ']
+
+            if len(lines) >= 1:
+                code = lines[0]
+
+            if len(lines) >= 2:
+                name = lines[1]
+
+            if len(lines) >= 3:
+                market = lines[2]
+
+            # =========================
+            # td取得
+            # =========================
+            tds = row.find_elements(By.TAG_NAME, "td")
+
+            if len(tds) < 7:
+                continue
+
+            price = tds[0].text.strip()
+
+            # 前日比
+            diff_lines = [
+                x.strip()
+                for x in tds[1].text.split("\n")
+                if x.strip()
+            ]
+
+            diff = ""
+            diff_percent = ""
+
+            if len(diff_lines) >= 1:
+                diff = diff_lines[0]
+
+            if len(diff_lines) >= 2:
+                diff_percent = diff_lines[1]
+
+            trading_value = tds[3].text.strip()
+            per = tds[4].text.strip()
+            pbr = tds[5].text.strip()
+            dividend = tds[6].text.strip()
+
+            # =========================
+            # 表示
+            # =========================
+            print(
+                code,
+                name,
+                market,
+                price,
+                diff,
+                diff_percent,
+                trading_value,
+                per,
+                pbr,
+                dividend
+            )
+
+            # =========================
+            # 保存
+            # =========================
+            data.append([
+                code,
+                name,
+                market,
+                price,
+                diff,
+                diff_percent,
+                trading_value,
+                per,
+                pbr,
+                dividend
+            ])
+
+        except Exception as e:
+            print("ERROR:", e)
+
+    # =========================
+    # CSV保存
+    # =========================
+    with open(
+        file_path,
+        "w",
+        newline="",
+        encoding="utf-8-sig"
+    ) as f:
+
+        writer = csv.writer(f)
+
+        writer.writerow([
+            "コード",
+            "銘柄名",
+            "市場",
+            "株価",
+            "前日比",
+            "前日比(%)",
+            "売買代金",
+            "PER",
+            "PBR",
+            "利回り"
         ])
 
-        if len(data) >= 15:
-            break
+        writer.writerows(data)
 
-    except Exception as e:
-        print("ERROR:", e)
+    print("=" * 50)
+    print(f"CSV保存完了: {file_path}")
 
-# =========================
-# ブラウザ終了
-# =========================
-driver.quit()
+finally:
 
-# =========================
-# CSV保存
-# =========================
-with open(file_path, "w", newline="", encoding="utf-8-sig") as f:
+    # =========================
+    # 終了
+    # =========================
+    driver.quit()
 
-    writer = csv.writer(f)
-
-    writer.writerow([
-        "コード",
-        "銘柄名",
-        "市場",
-        "株価",
-        "前日比",
-        "前日比(%)",
-        "売買代金",
-        "PER",
-        "PBR",
-        "利回り"
-    ])
-
-    writer.writerows(data)
-
-print(f"CSV保存完了: {file_path}")
+    print("=" * 50)
+    print("終了")
