@@ -46,7 +46,7 @@ print("Chrome起動")
 driver = webdriver.Chrome(options=options)
 
 # =========================
-# ページ取得
+# ページアクセス
 # =========================
 print("ページ取得開始")
 
@@ -67,40 +67,21 @@ print("取得行数:", len(rows))
 data = []
 
 # =========================
-# データ取得
+# 15件取得
 # =========================
-for row in rows:
+for row in rows[:15]:
 
     try:
         # =========================
         # th取得
         # =========================
-        ths = row.find_elements(By.TAG_NAME, "th")
+        th = row.find_element(By.TAG_NAME, "th")
 
-        # thが無い行はスキップ
-        if not ths:
-            continue
+        lines = th.text.split("\n")
 
-        th = ths[0]
-
-        parts = th.text.split()
-
-        # 初期化
-        name = ""
-        code = ""
-        market = ""
-
-        # =========================
-        # データ解析
-        # =========================
-        if len(parts) >= 1:
-            name = parts[0]
-
-        if len(parts) >= 2:
-            code = parts[1]
-
-        if len(parts) >= 3:
-            market = parts[2]
+        code = lines[0].strip() if len(lines) > 0 else ""
+        name = lines[1].strip() if len(lines) > 1 else ""
+        market = lines[2].strip() if len(lines) > 2 else ""
 
         # =========================
         # td取得
@@ -132,7 +113,6 @@ for row in rows:
             dividend
         )
 
-        # データ保存
         data.append([
             code,
             name,
@@ -145,10 +125,6 @@ for row in rows:
             pbr,
             dividend
         ])
-
-        # 15件だけ
-        if len(data) >= 15:
-            break
 
     except Exception as e:
         print("ERROR:", e)
