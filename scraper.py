@@ -7,7 +7,7 @@ import glob
 import pandas as pd
 
 # =========================
-# 設定（本番）
+# 設定
 # =========================
 FOLDER = os.path.join(os.getcwd(), "output")
 os.makedirs(FOLDER, exist_ok=True)
@@ -51,6 +51,56 @@ headers = {
 }
 
 # =========================
+# 解析関数（重要）
+# =========================
+def parse_row(row):
+
+    th = row.find("th")
+    tds = row.find_all("td")
+
+    if not th or len(tds) < 7:
+        return None
+
+    try:
+        # 銘柄（コード + 名前）
+        th_text = th.get_text(" ", strip=True)
+        parts = th_text.split()
+
+        if len(parts) < 2:
+            return None
+
+        code = parts[0]
+        name = parts[1]
+
+        market = tds[0].get_text(strip=True)
+        price = tds[1].get_text(strip=True)
+
+        diff = tds[2].get_text(strip=True)
+        diff_pct = tds[3].get_text(strip=True).replace("%", "")
+
+        trading_value = tds[4].get_text(strip=True).replace(",", "")
+
+        per = tds[5].get_text(strip=True).replace("倍", "")
+        pbr = tds[6].get_text(strip=True).replace("倍", "")
+        yield_ = tds[7].get_text(strip=True).replace("%", "")
+
+        return [
+            code,
+            name,
+            market,
+            price,
+            diff,
+            diff_pct,
+            trading_value,
+            per,
+            pbr,
+            yield_
+        ]
+
+    except Exception:
+        return None
+
+# =========================
 # 開始
 # =========================
 log("【開始】")
@@ -84,59 +134,25 @@ with open(filename, "w", newline="", encoding="utf-8") as f:
 
         soup = BeautifulSoup(res.text, "html.parser")
 
-        rows = soup.select("table.stock_table tr")
+        rows = soup.find_all("tr")
 
-        log(f"取得行数: {len(rows)}")
+        log(f"tr数: {len(rows)}")
 
         for row in rows:
 
-            cols = row.find_all("td")
+            data = parse_row(row)
 
-            if len(cols) < 10:
+            if not data:
                 continue
 
-            try:
-                code_name = row.find("th").get_text(strip=True)
+            writer.writerow([rank] + data)
 
-                if not code_name:
-                    continue
+            log(f"保存 {rank} {data[0]} {data[1]}")
 
-                code = code_name.split()[0]
-                name = code_name.split()[1]
+            rank += 1
 
-                market = cols[0].get_text(strip=True)
-                price = cols[1].get_text(strip=True)
-
-                diff = cols[2].get_text(strip=True)
-                diff_pct = cols[3].get_text(strip=True).replace("%", "")
-
-                trading_value = cols[4].get_text(strip=True).replace(",", "")
-
-                per = cols[5].get_text(strip=True).replace("倍", "")
-                pbr = cols[6].get_text(strip=True).replace("倍", "")
-                yield_ = cols[7].get_text(strip=True).replace("%", "")
-
-                writer.writerow([
-                    rank,
-                    code,
-                    name,
-                    market,
-                    price,
-                    diff,
-                    diff_pct,
-                    trading_value,
-                    per,
-                    pbr,
-                    yield_
-                ])
-
-                rank += 1
-
-                if rank > TOP_N:
-                    break
-
-            except Exception:
-                continue
+            if rank > TOP_N:
+                break
 
         if rank > TOP_N:
             break
@@ -144,17 +160,17 @@ with open(filename, "w", newline="", encoding="utf-8") as f:
 log("データ取得完了")
 
 # =========================
-# ★ merged復活（本番）
+# merged（本番復活）
 # =========================
 log("merged作成開始")
 
-merge_files = sorted(
+files = sorted(
     glob.glob(os.path.join(FOLDER, "trading_value_ranking_*.csv"))
 )
 
 df_list = []
 
-for file in merge_files:
+for file in files:
 
     try:
         df = pd.read_csv(file, encoding="utf-8")
