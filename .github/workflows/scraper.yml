@@ -8,6 +8,9 @@ on:
 permissions:
   contents: write
 
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
 jobs:
   scrape:
     runs-on: ubuntu-latest
@@ -40,5 +43,5 @@ jobs:
           git add output/
           git commit -m "Add latest scraper output [skip ci]" || echo "No changes"
 
-          git pull --rebase origin main
-          git push origin HEAD:main
+          git pull origin main --rebase || true
+          git push origin HEAD:main || echo "push skipped"
