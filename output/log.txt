@@ -1,0 +1,402 @@
+2026-05-19 08:11:51 開始
+2026-05-19 08:11:51 https://kabutan.jp/warning/trading_value_ranking?market=0&capitalization=-1&stc=&stm=0&page=1
+2026-05-19 08:11:52 rows: 15
+2026-05-19 08:11:52 https://kabutan.jp/warning/trading_value_ranking?market=0&capitalization=-1&stc=&stm=0&page=2
+2026-05-19 08:11:53 rows: 15
+2026-05-19 08:11:53 https://kabutan.jp/warning/trading_value_ranking?market=0&capitalization=-1&stc=&stm=0&page=3
+2026-05-19 08:11:54 rows: 15
+2026-05-19 08:11:54 https://kabutan.jp/warning/trading_value_ranking?market=0&capitalization=-1&stc=&stm=0&page=4
+2026-05-19 08:11:55 rows: 15
+2026-05-19 08:11:55 https://kabutan.jp/warning/trading_value_ranking?market=0&capitalization=-1&stc=&stm=0&page=5
+2026-05-19 08:11:55 rows: 15
+2026-05-19 08:11:55 https://kabutan.jp/warning/trading_value_ranking?market=0&capitalization=-1&stc=&stm=0&page=6
+2026-05-19 08:11:56 rows: 15
+2026-05-19 08:11:56 https://kabutan.jp/warning/trading_value_ranking?market=0&capitalization=-1&stc=&stm=0&page=7
+2026-05-19 08:11:57 rows: 15
+2026-05-19 08:11:57 https://kabutan.jp/warning/trading_value_ranking?market=0&capitalization=-1&stc=&stm=0&page=8
+2026-05-19 08:11:58 rows: 15
+2026-05-19 08:11:58 https://kabutan.jp/warning/trading_value_ranking?market=0&capitalization=-1&stc=&stm=0&page=9
+2026-05-19 08:11:59 rows: 15
+2026-05-19 08:11:59 https://kabutan.jp/warning/trading_value_ranking?market=0&capitalization=-1&stc=&stm=0&page=10
+2026-05-19 08:11:59 rows: 15
+2026-05-19 08:11:59 https://kabutan.jp/warning/trading_value_ranking?market=0&capitalization=-1&stc=&stm=0&page=11
+2026-05-19 08:12:00 rows: 15
+2026-05-19 08:12:00 https://kabutan.jp/warning/trading_value_ranking?market=0&capitalization=-1&stc=&stm=0&page=12
+2026-05-19 08:12:01 rows: 15
+2026-05-19 08:12:01 https://kabutan.jp/warning/trading_value_ranking?market=0&capitalization=-1&stc=&stm=0&page=13
+2026-05-19 08:12:02 rows: 15
+2026-05-19 08:12:02 https://kabutan.jp/warning/trading_value_ranking?market=0&capitalization=-1&stc=&stm=0&page=14
+2026-05-19 08:12:02 rows: 15
+2026-05-19 08:12:02 https://kabutan.jp/warning/trading_value_ranking?market=0&capitalization=-1&stc=&stm=0&page=15
+2026-05-19 08:12:04 rows: 15
+2026-05-19 08:12:04 https://kabutan.jp/warning/trading_value_ranking?market=0&capitalization=-1&stc=&stm=0&page=16
+2026-05-19 08:12:05 rows: 15
+2026-05-19 08:12:05 https://kabutan.jp/warning/trading_value_ranking?market=0&capitalization=-1&stc=&stm=0&page=17
+2026-05-19 08:12:05 rows: 15
+2026-05-19 08:12:05 https://kabutan.jp/warning/trading_value_ranking?market=0&capitalization=-1&stc=&stm=0&page=18
+2026-05-19 08:12:06 rows: 15
+2026-05-19 08:12:06 https://kabutan.jp/warning/trading_value_ranking?market=0&capitalization=-1&stc=&stm=0&page=19
+2026-05-19 08:12:07 rows: 15
+2026-05-19 08:12:07 https://kabutan.jp/warning/trading_value_ranking?market=0&capitalization=-1&stc=&stm=0&page=20
+2026-05-19 08:12:08 rows: 15
+2026-05-19 08:12:08 https://kabutan.jp/warning/trading_value_ranking?market=0&capitalization=-1&stc=&stm=0&page=21
+2026-05-19 08:12:08 rows: 15
+2026-05-19 08:12:08 https://kabutan.jp/warning/trading_value_ranking?market=0&capitalization=-1&stc=&stm=0&page=22
+2026-05-19 08:12:09 rows: 15
+2026-05-19 08:12:09 https://kabutan.jp/warning/trading_value_ranking?market=0&capitalization=-1&stc=&stm=0&page=23
+2026-05-19 08:12:10 rows: 15
+2026-05-19 08:12:10 https://kabutan.jp/warning/trading_value_ranking?market=0&capitalization=-1&stc=&stm=0&page=24
+2026-05-19 08:12:11 rows: 15
+2026-05-19 08:12:11 https://kabutan.jp/warning/trading_value_ranking?market=0&capitalization=-1&stc=&stm=0&page=25
+2026-05-19 08:12:12 rows: 15
+2026-05-19 08:12:12 https://kabutan.jp/warning/trading_value_ranking?market=0&capitalization=-1&stc=&stm=0&page=26
+2026-05-19 08:12:12 rows: 15
+2026-05-19 08:12:12 https://kabutan.jp/warning/trading_value_ranking?market=0&capitalization=-1&stc=&stm=0&page=27
+2026-05-19 08:12:14 rows: 15
+2026-05-19 08:12:14 https://kabutan.jp/warning/trading_value_ranking?market=0&capitalization=-1&stc=&stm=0&page=28
+2026-05-19 08:12:15 rows: 15
+2026-05-19 08:12:15 https://kabutan.jp/warning/trading_value_ranking?market=0&capitalization=-1&stc=&stm=0&page=29
+2026-05-19 08:12:16 rows: 15
+2026-05-19 08:12:16 https://kabutan.jp/warning/trading_value_ranking?market=0&capitalization=-1&stc=&stm=0&page=30
+2026-05-19 08:12:16 rows: 15
+2026-05-19 08:12:16 https://kabutan.jp/warning/trading_value_ranking?market=0&capitalization=-1&stc=&stm=0&page=31
+2026-05-19 08:12:17 rows: 15
+2026-05-19 08:12:17 https://kabutan.jp/warning/trading_value_ranking?market=0&capitalization=-1&stc=&stm=0&page=32
+2026-05-19 08:12:18 rows: 15
+2026-05-19 08:12:18 https://kabutan.jp/warning/trading_value_ranking?market=0&capitalization=-1&stc=&stm=0&page=33
+2026-05-19 08:12:19 rows: 15
+2026-05-19 08:12:19 https://kabutan.jp/warning/trading_value_ranking?market=0&capitalization=-1&stc=&stm=0&page=34
+2026-05-19 08:12:19 rows: 15
+2026-05-19 08:12:19 https://kabutan.jp/warning/trading_value_ranking?market=0&capitalization=-1&stc=&stm=0&page=35
+2026-05-19 08:12:20 rows: 15
+2026-05-19 08:12:20 https://kabutan.jp/warning/trading_value_ranking?market=0&capitalization=-1&stc=&stm=0&page=36
+2026-05-19 08:12:21 rows: 15
+2026-05-19 08:12:21 https://kabutan.jp/warning/trading_value_ranking?market=0&capitalization=-1&stc=&stm=0&page=37
+2026-05-19 08:12:22 rows: 15
+2026-05-19 08:12:22 https://kabutan.jp/warning/trading_value_ranking?market=0&capitalization=-1&stc=&stm=0&page=38
+2026-05-19 08:12:23 rows: 15
+2026-05-19 08:12:23 https://kabutan.jp/warning/trading_value_ranking?market=0&capitalization=-1&stc=&stm=0&page=39
+2026-05-19 08:12:23 rows: 15
+2026-05-19 08:12:23 https://kabutan.jp/warning/trading_value_ranking?market=0&capitalization=-1&stc=&stm=0&page=40
+2026-05-19 08:12:24 rows: 15
+2026-05-19 08:12:24 https://kabutan.jp/warning/trading_value_ranking?market=0&capitalization=-1&stc=&stm=0&page=41
+2026-05-19 08:12:25 rows: 15
+2026-05-19 08:12:25 https://kabutan.jp/warning/trading_value_ranking?market=0&capitalization=-1&stc=&stm=0&page=42
+2026-05-19 08:12:26 rows: 15
+2026-05-19 08:12:26 https://kabutan.jp/warning/trading_value_ranking?market=0&capitalization=-1&stc=&stm=0&page=43
+2026-05-19 08:12:27 rows: 15
+2026-05-19 08:12:27 https://kabutan.jp/warning/trading_value_ranking?market=0&capitalization=-1&stc=&stm=0&page=44
+2026-05-19 08:12:28 rows: 15
+2026-05-19 08:12:28 https://kabutan.jp/warning/trading_value_ranking?market=0&capitalization=-1&stc=&stm=0&page=45
+2026-05-19 08:12:29 rows: 15
+2026-05-19 08:12:29 https://kabutan.jp/warning/trading_value_ranking?market=0&capitalization=-1&stc=&stm=0&page=46
+2026-05-19 08:12:30 rows: 15
+2026-05-19 08:12:30 https://kabutan.jp/warning/trading_value_ranking?market=0&capitalization=-1&stc=&stm=0&page=47
+2026-05-19 08:12:30 rows: 15
+2026-05-19 08:12:30 https://kabutan.jp/warning/trading_value_ranking?market=0&capitalization=-1&stc=&stm=0&page=48
+2026-05-19 08:12:31 rows: 15
+2026-05-19 08:12:31 https://kabutan.jp/warning/trading_value_ranking?market=0&capitalization=-1&stc=&stm=0&page=49
+2026-05-19 08:12:32 rows: 15
+2026-05-19 08:12:32 https://kabutan.jp/warning/trading_value_ranking?market=0&capitalization=-1&stc=&stm=0&page=50
+2026-05-19 08:12:33 rows: 15
+2026-05-19 08:12:33 https://kabutan.jp/warning/trading_value_ranking?market=0&capitalization=-1&stc=&stm=0&page=51
+2026-05-19 08:12:34 rows: 15
+2026-05-19 08:12:34 https://kabutan.jp/warning/trading_value_ranking?market=0&capitalization=-1&stc=&stm=0&page=52
+2026-05-19 08:12:34 rows: 15
+2026-05-19 08:12:34 https://kabutan.jp/warning/trading_value_ranking?market=0&capitalization=-1&stc=&stm=0&page=53
+2026-05-19 08:12:35 rows: 15
+2026-05-19 08:12:35 https://kabutan.jp/warning/trading_value_ranking?market=0&capitalization=-1&stc=&stm=0&page=54
+2026-05-19 08:12:36 rows: 15
+2026-05-19 08:12:36 https://kabutan.jp/warning/trading_value_ranking?market=0&capitalization=-1&stc=&stm=0&page=55
+2026-05-19 08:12:37 rows: 15
+2026-05-19 08:12:37 https://kabutan.jp/warning/trading_value_ranking?market=0&capitalization=-1&stc=&stm=0&page=56
+2026-05-19 08:12:38 rows: 15
+2026-05-19 08:12:38 https://kabutan.jp/warning/trading_value_ranking?market=0&capitalization=-1&stc=&stm=0&page=57
+2026-05-19 08:12:39 rows: 15
+2026-05-19 08:12:39 https://kabutan.jp/warning/trading_value_ranking?market=0&capitalization=-1&stc=&stm=0&page=58
+2026-05-19 08:12:40 rows: 15
+2026-05-19 08:12:40 https://kabutan.jp/warning/trading_value_ranking?market=0&capitalization=-1&stc=&stm=0&page=59
+2026-05-19 08:12:41 rows: 15
+2026-05-19 08:12:41 https://kabutan.jp/warning/trading_value_ranking?market=0&capitalization=-1&stc=&stm=0&page=60
+2026-05-19 08:12:41 rows: 15
+2026-05-19 08:12:41 https://kabutan.jp/warning/trading_value_ranking?market=0&capitalization=-1&stc=&stm=0&page=61
+2026-05-19 08:12:42 rows: 15
+2026-05-19 08:12:42 https://kabutan.jp/warning/trading_value_ranking?market=0&capitalization=-1&stc=&stm=0&page=62
+2026-05-19 08:12:43 rows: 15
+2026-05-19 08:12:43 https://kabutan.jp/warning/trading_value_ranking?market=0&capitalization=-1&stc=&stm=0&page=63
+2026-05-19 08:12:44 rows: 15
+2026-05-19 08:12:44 https://kabutan.jp/warning/trading_value_ranking?market=0&capitalization=-1&stc=&stm=0&page=64
+2026-05-19 08:12:44 rows: 15
+2026-05-19 08:12:45 https://kabutan.jp/warning/trading_value_ranking?market=0&capitalization=-1&stc=&stm=0&page=65
+2026-05-19 08:12:45 rows: 15
+2026-05-19 08:12:45 https://kabutan.jp/warning/trading_value_ranking?market=0&capitalization=-1&stc=&stm=0&page=66
+2026-05-19 08:12:46 rows: 15
+2026-05-19 08:12:46 https://kabutan.jp/warning/trading_value_ranking?market=0&capitalization=-1&stc=&stm=0&page=67
+2026-05-19 08:12:47 rows: 15
+2026-05-19 08:12:47 https://kabutan.jp/warning/trading_value_ranking?market=0&capitalization=-1&stc=&stm=0&page=68
+2026-05-19 08:12:48 rows: 15
+2026-05-19 08:12:48 https://kabutan.jp/warning/trading_value_ranking?market=0&capitalization=-1&stc=&stm=0&page=69
+2026-05-19 08:12:49 rows: 15
+2026-05-19 08:12:49 https://kabutan.jp/warning/trading_value_ranking?market=0&capitalization=-1&stc=&stm=0&page=70
+2026-05-19 08:12:50 rows: 15
+2026-05-19 08:12:50 https://kabutan.jp/warning/trading_value_ranking?market=0&capitalization=-1&stc=&stm=0&page=71
+2026-05-19 08:12:50 rows: 15
+2026-05-19 08:12:50 https://kabutan.jp/warning/trading_value_ranking?market=0&capitalization=-1&stc=&stm=0&page=72
+2026-05-19 08:12:52 rows: 15
+2026-05-19 08:12:52 https://kabutan.jp/warning/trading_value_ranking?market=0&capitalization=-1&stc=&stm=0&page=73
+2026-05-19 08:12:52 rows: 15
+2026-05-19 08:12:52 https://kabutan.jp/warning/trading_value_ranking?market=0&capitalization=-1&stc=&stm=0&page=74
+2026-05-19 08:12:53 rows: 15
+2026-05-19 08:12:53 https://kabutan.jp/warning/trading_value_ranking?market=0&capitalization=-1&stc=&stm=0&page=75
+2026-05-19 08:12:54 rows: 15
+2026-05-19 08:12:54 https://kabutan.jp/warning/trading_value_ranking?market=0&capitalization=-1&stc=&stm=0&page=76
+2026-05-19 08:12:55 rows: 15
+2026-05-19 08:12:55 https://kabutan.jp/warning/trading_value_ranking?market=0&capitalization=-1&stc=&stm=0&page=77
+2026-05-19 08:12:56 rows: 15
+2026-05-19 08:12:56 https://kabutan.jp/warning/trading_value_ranking?market=0&capitalization=-1&stc=&stm=0&page=78
+2026-05-19 08:12:56 rows: 15
+2026-05-19 08:12:56 https://kabutan.jp/warning/trading_value_ranking?market=0&capitalization=-1&stc=&stm=0&page=79
+2026-05-19 08:12:57 rows: 15
+2026-05-19 08:12:57 https://kabutan.jp/warning/trading_value_ranking?market=0&capitalization=-1&stc=&stm=0&page=80
+2026-05-19 08:12:58 rows: 15
+2026-05-19 08:12:58 https://kabutan.jp/warning/trading_value_ranking?market=0&capitalization=-1&stc=&stm=0&page=81
+2026-05-19 08:12:59 rows: 15
+2026-05-19 08:12:59 https://kabutan.jp/warning/trading_value_ranking?market=0&capitalization=-1&stc=&stm=0&page=82
+2026-05-19 08:12:59 rows: 15
+2026-05-19 08:12:59 https://kabutan.jp/warning/trading_value_ranking?market=0&capitalization=-1&stc=&stm=0&page=83
+2026-05-19 08:13:00 rows: 15
+2026-05-19 08:13:00 https://kabutan.jp/warning/trading_value_ranking?market=0&capitalization=-1&stc=&stm=0&page=84
+2026-05-19 08:13:01 rows: 15
+2026-05-19 08:13:01 https://kabutan.jp/warning/trading_value_ranking?market=0&capitalization=-1&stc=&stm=0&page=85
+2026-05-19 08:13:03 rows: 15
+2026-05-19 08:13:03 https://kabutan.jp/warning/trading_value_ranking?market=0&capitalization=-1&stc=&stm=0&page=86
+2026-05-19 08:13:04 rows: 15
+2026-05-19 08:13:04 https://kabutan.jp/warning/trading_value_ranking?market=0&capitalization=-1&stc=&stm=0&page=87
+2026-05-19 08:13:04 rows: 15
+2026-05-19 08:13:04 https://kabutan.jp/warning/trading_value_ranking?market=0&capitalization=-1&stc=&stm=0&page=88
+2026-05-19 08:13:05 rows: 15
+2026-05-19 08:13:05 https://kabutan.jp/warning/trading_value_ranking?market=0&capitalization=-1&stc=&stm=0&page=89
+2026-05-19 08:13:06 rows: 15
+2026-05-19 08:13:06 https://kabutan.jp/warning/trading_value_ranking?market=0&capitalization=-1&stc=&stm=0&page=90
+2026-05-19 08:13:07 rows: 15
+2026-05-19 08:13:07 https://kabutan.jp/warning/trading_value_ranking?market=0&capitalization=-1&stc=&stm=0&page=91
+2026-05-19 08:13:07 rows: 15
+2026-05-19 08:13:07 https://kabutan.jp/warning/trading_value_ranking?market=0&capitalization=-1&stc=&stm=0&page=92
+2026-05-19 08:13:08 rows: 15
+2026-05-19 08:13:08 https://kabutan.jp/warning/trading_value_ranking?market=0&capitalization=-1&stc=&stm=0&page=93
+2026-05-19 08:13:09 rows: 15
+2026-05-19 08:13:09 https://kabutan.jp/warning/trading_value_ranking?market=0&capitalization=-1&stc=&stm=0&page=94
+2026-05-19 08:13:10 rows: 15
+2026-05-19 08:13:10 https://kabutan.jp/warning/trading_value_ranking?market=0&capitalization=-1&stc=&stm=0&page=95
+2026-05-19 08:13:10 rows: 15
+2026-05-19 08:13:10 https://kabutan.jp/warning/trading_value_ranking?market=0&capitalization=-1&stc=&stm=0&page=96
+2026-05-19 08:13:11 rows: 15
+2026-05-19 08:13:11 https://kabutan.jp/warning/trading_value_ranking?market=0&capitalization=-1&stc=&stm=0&page=97
+2026-05-19 08:13:12 rows: 15
+2026-05-19 08:13:12 https://kabutan.jp/warning/trading_value_ranking?market=0&capitalization=-1&stc=&stm=0&page=98
+2026-05-19 08:13:13 rows: 15
+2026-05-19 08:13:13 https://kabutan.jp/warning/trading_value_ranking?market=0&capitalization=-1&stc=&stm=0&page=99
+2026-05-19 08:13:14 rows: 15
+2026-05-19 08:13:14 https://kabutan.jp/warning/trading_value_ranking?market=0&capitalization=-1&stc=&stm=0&page=100
+2026-05-19 08:13:15 rows: 15
+2026-05-19 08:13:15 https://kabutan.jp/warning/trading_value_ranking?market=0&capitalization=-1&stc=&stm=0&page=101
+2026-05-19 08:13:16 rows: 15
+2026-05-19 08:13:16 https://kabutan.jp/warning/trading_value_ranking?market=0&capitalization=-1&stc=&stm=0&page=102
+2026-05-19 08:13:17 rows: 15
+2026-05-19 08:13:17 https://kabutan.jp/warning/trading_value_ranking?market=0&capitalization=-1&stc=&stm=0&page=103
+2026-05-19 08:13:18 rows: 15
+2026-05-19 08:13:18 https://kabutan.jp/warning/trading_value_ranking?market=0&capitalization=-1&stc=&stm=0&page=104
+2026-05-19 08:13:18 rows: 15
+2026-05-19 08:13:18 https://kabutan.jp/warning/trading_value_ranking?market=0&capitalization=-1&stc=&stm=0&page=105
+2026-05-19 08:13:19 rows: 15
+2026-05-19 08:13:19 https://kabutan.jp/warning/trading_value_ranking?market=0&capitalization=-1&stc=&stm=0&page=106
+2026-05-19 08:13:20 rows: 15
+2026-05-19 08:13:20 https://kabutan.jp/warning/trading_value_ranking?market=0&capitalization=-1&stc=&stm=0&page=107
+2026-05-19 08:13:21 rows: 15
+2026-05-19 08:13:21 https://kabutan.jp/warning/trading_value_ranking?market=0&capitalization=-1&stc=&stm=0&page=108
+2026-05-19 08:13:21 rows: 15
+2026-05-19 08:13:21 https://kabutan.jp/warning/trading_value_ranking?market=0&capitalization=-1&stc=&stm=0&page=109
+2026-05-19 08:13:22 rows: 15
+2026-05-19 08:13:22 https://kabutan.jp/warning/trading_value_ranking?market=0&capitalization=-1&stc=&stm=0&page=110
+2026-05-19 08:13:23 rows: 15
+2026-05-19 08:13:23 https://kabutan.jp/warning/trading_value_ranking?market=0&capitalization=-1&stc=&stm=0&page=111
+2026-05-19 08:13:24 rows: 15
+2026-05-19 08:13:24 https://kabutan.jp/warning/trading_value_ranking?market=0&capitalization=-1&stc=&stm=0&page=112
+2026-05-19 08:13:25 rows: 15
+2026-05-19 08:13:25 https://kabutan.jp/warning/trading_value_ranking?market=0&capitalization=-1&stc=&stm=0&page=113
+2026-05-19 08:13:26 rows: 15
+2026-05-19 08:13:26 https://kabutan.jp/warning/trading_value_ranking?market=0&capitalization=-1&stc=&stm=0&page=114
+2026-05-19 08:13:27 rows: 15
+2026-05-19 08:13:27 https://kabutan.jp/warning/trading_value_ranking?market=0&capitalization=-1&stc=&stm=0&page=115
+2026-05-19 08:13:28 rows: 15
+2026-05-19 08:13:28 https://kabutan.jp/warning/trading_value_ranking?market=0&capitalization=-1&stc=&stm=0&page=116
+2026-05-19 08:13:29 rows: 15
+2026-05-19 08:13:29 https://kabutan.jp/warning/trading_value_ranking?market=0&capitalization=-1&stc=&stm=0&page=117
+2026-05-19 08:13:30 rows: 15
+2026-05-19 08:13:30 https://kabutan.jp/warning/trading_value_ranking?market=0&capitalization=-1&stc=&stm=0&page=118
+2026-05-19 08:13:30 rows: 15
+2026-05-19 08:13:30 https://kabutan.jp/warning/trading_value_ranking?market=0&capitalization=-1&stc=&stm=0&page=119
+2026-05-19 08:13:31 rows: 15
+2026-05-19 08:13:31 https://kabutan.jp/warning/trading_value_ranking?market=0&capitalization=-1&stc=&stm=0&page=120
+2026-05-19 08:13:32 rows: 15
+2026-05-19 08:13:32 https://kabutan.jp/warning/trading_value_ranking?market=0&capitalization=-1&stc=&stm=0&page=121
+2026-05-19 08:13:33 rows: 15
+2026-05-19 08:13:33 https://kabutan.jp/warning/trading_value_ranking?market=0&capitalization=-1&stc=&stm=0&page=122
+2026-05-19 08:13:33 rows: 15
+2026-05-19 08:13:33 https://kabutan.jp/warning/trading_value_ranking?market=0&capitalization=-1&stc=&stm=0&page=123
+2026-05-19 08:13:34 rows: 15
+2026-05-19 08:13:34 https://kabutan.jp/warning/trading_value_ranking?market=0&capitalization=-1&stc=&stm=0&page=124
+2026-05-19 08:13:35 rows: 15
+2026-05-19 08:13:35 https://kabutan.jp/warning/trading_value_ranking?market=0&capitalization=-1&stc=&stm=0&page=125
+2026-05-19 08:13:36 rows: 15
+2026-05-19 08:13:36 https://kabutan.jp/warning/trading_value_ranking?market=0&capitalization=-1&stc=&stm=0&page=126
+2026-05-19 08:13:37 rows: 15
+2026-05-19 08:13:37 https://kabutan.jp/warning/trading_value_ranking?market=0&capitalization=-1&stc=&stm=0&page=127
+2026-05-19 08:13:38 rows: 15
+2026-05-19 08:13:38 https://kabutan.jp/warning/trading_value_ranking?market=0&capitalization=-1&stc=&stm=0&page=128
+2026-05-19 08:13:39 rows: 15
+2026-05-19 08:13:39 https://kabutan.jp/warning/trading_value_ranking?market=0&capitalization=-1&stc=&stm=0&page=129
+2026-05-19 08:13:40 rows: 15
+2026-05-19 08:13:40 https://kabutan.jp/warning/trading_value_ranking?market=0&capitalization=-1&stc=&stm=0&page=130
+2026-05-19 08:13:40 rows: 15
+2026-05-19 08:13:40 https://kabutan.jp/warning/trading_value_ranking?market=0&capitalization=-1&stc=&stm=0&page=131
+2026-05-19 08:13:41 rows: 15
+2026-05-19 08:13:41 https://kabutan.jp/warning/trading_value_ranking?market=0&capitalization=-1&stc=&stm=0&page=132
+2026-05-19 08:13:42 rows: 15
+2026-05-19 08:13:42 https://kabutan.jp/warning/trading_value_ranking?market=0&capitalization=-1&stc=&stm=0&page=133
+2026-05-19 08:13:43 rows: 15
+2026-05-19 08:13:43 https://kabutan.jp/warning/trading_value_ranking?market=0&capitalization=-1&stc=&stm=0&page=134
+2026-05-19 08:13:43 rows: 15
+2026-05-19 08:13:43 https://kabutan.jp/warning/trading_value_ranking?market=0&capitalization=-1&stc=&stm=0&page=135
+2026-05-19 08:13:44 rows: 15
+2026-05-19 08:13:44 https://kabutan.jp/warning/trading_value_ranking?market=0&capitalization=-1&stc=&stm=0&page=136
+2026-05-19 08:13:45 rows: 15
+2026-05-19 08:13:45 https://kabutan.jp/warning/trading_value_ranking?market=0&capitalization=-1&stc=&stm=0&page=137
+2026-05-19 08:13:46 rows: 15
+2026-05-19 08:13:46 https://kabutan.jp/warning/trading_value_ranking?market=0&capitalization=-1&stc=&stm=0&page=138
+2026-05-19 08:13:47 rows: 15
+2026-05-19 08:13:47 https://kabutan.jp/warning/trading_value_ranking?market=0&capitalization=-1&stc=&stm=0&page=139
+2026-05-19 08:13:48 rows: 15
+2026-05-19 08:13:48 https://kabutan.jp/warning/trading_value_ranking?market=0&capitalization=-1&stc=&stm=0&page=140
+2026-05-19 08:13:49 rows: 15
+2026-05-19 08:13:49 https://kabutan.jp/warning/trading_value_ranking?market=0&capitalization=-1&stc=&stm=0&page=141
+2026-05-19 08:13:49 rows: 15
+2026-05-19 08:13:49 https://kabutan.jp/warning/trading_value_ranking?market=0&capitalization=-1&stc=&stm=0&page=142
+2026-05-19 08:13:50 rows: 15
+2026-05-19 08:13:50 https://kabutan.jp/warning/trading_value_ranking?market=0&capitalization=-1&stc=&stm=0&page=143
+2026-05-19 08:13:51 rows: 15
+2026-05-19 08:13:51 https://kabutan.jp/warning/trading_value_ranking?market=0&capitalization=-1&stc=&stm=0&page=144
+2026-05-19 08:13:52 rows: 15
+2026-05-19 08:13:52 https://kabutan.jp/warning/trading_value_ranking?market=0&capitalization=-1&stc=&stm=0&page=145
+2026-05-19 08:13:53 rows: 15
+2026-05-19 08:13:53 https://kabutan.jp/warning/trading_value_ranking?market=0&capitalization=-1&stc=&stm=0&page=146
+2026-05-19 08:13:54 rows: 15
+2026-05-19 08:13:54 https://kabutan.jp/warning/trading_value_ranking?market=0&capitalization=-1&stc=&stm=0&page=147
+2026-05-19 08:13:54 rows: 15
+2026-05-19 08:13:54 https://kabutan.jp/warning/trading_value_ranking?market=0&capitalization=-1&stc=&stm=0&page=148
+2026-05-19 08:13:55 rows: 15
+2026-05-19 08:13:55 https://kabutan.jp/warning/trading_value_ranking?market=0&capitalization=-1&stc=&stm=0&page=149
+2026-05-19 08:13:56 rows: 15
+2026-05-19 08:13:56 https://kabutan.jp/warning/trading_value_ranking?market=0&capitalization=-1&stc=&stm=0&page=150
+2026-05-19 08:13:57 rows: 15
+2026-05-19 08:13:57 https://kabutan.jp/warning/trading_value_ranking?market=0&capitalization=-1&stc=&stm=0&page=151
+2026-05-19 08:13:58 rows: 15
+2026-05-19 08:13:58 https://kabutan.jp/warning/trading_value_ranking?market=0&capitalization=-1&stc=&stm=0&page=152
+2026-05-19 08:13:58 rows: 15
+2026-05-19 08:13:58 https://kabutan.jp/warning/trading_value_ranking?market=0&capitalization=-1&stc=&stm=0&page=153
+2026-05-19 08:13:59 rows: 15
+2026-05-19 08:13:59 https://kabutan.jp/warning/trading_value_ranking?market=0&capitalization=-1&stc=&stm=0&page=154
+2026-05-19 08:14:00 rows: 15
+2026-05-19 08:14:00 https://kabutan.jp/warning/trading_value_ranking?market=0&capitalization=-1&stc=&stm=0&page=155
+2026-05-19 08:14:01 rows: 15
+2026-05-19 08:14:01 https://kabutan.jp/warning/trading_value_ranking?market=0&capitalization=-1&stc=&stm=0&page=156
+2026-05-19 08:14:02 rows: 15
+2026-05-19 08:14:02 https://kabutan.jp/warning/trading_value_ranking?market=0&capitalization=-1&stc=&stm=0&page=157
+2026-05-19 08:14:03 rows: 15
+2026-05-19 08:14:03 https://kabutan.jp/warning/trading_value_ranking?market=0&capitalization=-1&stc=&stm=0&page=158
+2026-05-19 08:14:03 rows: 15
+2026-05-19 08:14:03 https://kabutan.jp/warning/trading_value_ranking?market=0&capitalization=-1&stc=&stm=0&page=159
+2026-05-19 08:14:04 rows: 15
+2026-05-19 08:14:04 https://kabutan.jp/warning/trading_value_ranking?market=0&capitalization=-1&stc=&stm=0&page=160
+2026-05-19 08:14:06 rows: 15
+2026-05-19 08:14:06 https://kabutan.jp/warning/trading_value_ranking?market=0&capitalization=-1&stc=&stm=0&page=161
+2026-05-19 08:14:06 rows: 15
+2026-05-19 08:14:06 https://kabutan.jp/warning/trading_value_ranking?market=0&capitalization=-1&stc=&stm=0&page=162
+2026-05-19 08:14:07 rows: 15
+2026-05-19 08:14:07 https://kabutan.jp/warning/trading_value_ranking?market=0&capitalization=-1&stc=&stm=0&page=163
+2026-05-19 08:14:08 rows: 15
+2026-05-19 08:14:08 https://kabutan.jp/warning/trading_value_ranking?market=0&capitalization=-1&stc=&stm=0&page=164
+2026-05-19 08:14:09 rows: 15
+2026-05-19 08:14:09 https://kabutan.jp/warning/trading_value_ranking?market=0&capitalization=-1&stc=&stm=0&page=165
+2026-05-19 08:14:09 rows: 15
+2026-05-19 08:14:09 https://kabutan.jp/warning/trading_value_ranking?market=0&capitalization=-1&stc=&stm=0&page=166
+2026-05-19 08:14:10 rows: 15
+2026-05-19 08:14:10 https://kabutan.jp/warning/trading_value_ranking?market=0&capitalization=-1&stc=&stm=0&page=167
+2026-05-19 08:14:11 rows: 15
+2026-05-19 08:14:11 https://kabutan.jp/warning/trading_value_ranking?market=0&capitalization=-1&stc=&stm=0&page=168
+2026-05-19 08:14:12 rows: 15
+2026-05-19 08:14:12 https://kabutan.jp/warning/trading_value_ranking?market=0&capitalization=-1&stc=&stm=0&page=169
+2026-05-19 08:14:12 rows: 15
+2026-05-19 08:14:12 https://kabutan.jp/warning/trading_value_ranking?market=0&capitalization=-1&stc=&stm=0&page=170
+2026-05-19 08:14:13 rows: 15
+2026-05-19 08:14:13 https://kabutan.jp/warning/trading_value_ranking?market=0&capitalization=-1&stc=&stm=0&page=171
+2026-05-19 08:14:14 rows: 15
+2026-05-19 08:14:14 https://kabutan.jp/warning/trading_value_ranking?market=0&capitalization=-1&stc=&stm=0&page=172
+2026-05-19 08:14:15 rows: 15
+2026-05-19 08:14:15 https://kabutan.jp/warning/trading_value_ranking?market=0&capitalization=-1&stc=&stm=0&page=173
+2026-05-19 08:14:15 rows: 15
+2026-05-19 08:14:15 https://kabutan.jp/warning/trading_value_ranking?market=0&capitalization=-1&stc=&stm=0&page=174
+2026-05-19 08:14:17 rows: 15
+2026-05-19 08:14:17 https://kabutan.jp/warning/trading_value_ranking?market=0&capitalization=-1&stc=&stm=0&page=175
+2026-05-19 08:14:18 rows: 15
+2026-05-19 08:14:18 https://kabutan.jp/warning/trading_value_ranking?market=0&capitalization=-1&stc=&stm=0&page=176
+2026-05-19 08:14:19 rows: 15
+2026-05-19 08:14:19 https://kabutan.jp/warning/trading_value_ranking?market=0&capitalization=-1&stc=&stm=0&page=177
+2026-05-19 08:14:20 rows: 15
+2026-05-19 08:14:20 https://kabutan.jp/warning/trading_value_ranking?market=0&capitalization=-1&stc=&stm=0&page=178
+2026-05-19 08:14:20 rows: 15
+2026-05-19 08:14:20 https://kabutan.jp/warning/trading_value_ranking?market=0&capitalization=-1&stc=&stm=0&page=179
+2026-05-19 08:14:21 rows: 15
+2026-05-19 08:14:21 https://kabutan.jp/warning/trading_value_ranking?market=0&capitalization=-1&stc=&stm=0&page=180
+2026-05-19 08:14:22 rows: 15
+2026-05-19 08:14:22 https://kabutan.jp/warning/trading_value_ranking?market=0&capitalization=-1&stc=&stm=0&page=181
+2026-05-19 08:14:23 rows: 15
+2026-05-19 08:14:23 https://kabutan.jp/warning/trading_value_ranking?market=0&capitalization=-1&stc=&stm=0&page=182
+2026-05-19 08:14:23 rows: 15
+2026-05-19 08:14:23 https://kabutan.jp/warning/trading_value_ranking?market=0&capitalization=-1&stc=&stm=0&page=183
+2026-05-19 08:14:24 rows: 15
+2026-05-19 08:14:24 https://kabutan.jp/warning/trading_value_ranking?market=0&capitalization=-1&stc=&stm=0&page=184
+2026-05-19 08:14:25 rows: 15
+2026-05-19 08:14:25 https://kabutan.jp/warning/trading_value_ranking?market=0&capitalization=-1&stc=&stm=0&page=185
+2026-05-19 08:14:26 rows: 15
+2026-05-19 08:14:26 https://kabutan.jp/warning/trading_value_ranking?market=0&capitalization=-1&stc=&stm=0&page=186
+2026-05-19 08:14:26 rows: 15
+2026-05-19 08:14:26 https://kabutan.jp/warning/trading_value_ranking?market=0&capitalization=-1&stc=&stm=0&page=187
+2026-05-19 08:14:27 rows: 15
+2026-05-19 08:14:27 https://kabutan.jp/warning/trading_value_ranking?market=0&capitalization=-1&stc=&stm=0&page=188
+2026-05-19 08:14:28 rows: 15
+2026-05-19 08:14:28 https://kabutan.jp/warning/trading_value_ranking?market=0&capitalization=-1&stc=&stm=0&page=189
+2026-05-19 08:14:30 rows: 15
+2026-05-19 08:14:30 https://kabutan.jp/warning/trading_value_ranking?market=0&capitalization=-1&stc=&stm=0&page=190
+2026-05-19 08:14:31 rows: 15
+2026-05-19 08:14:31 https://kabutan.jp/warning/trading_value_ranking?market=0&capitalization=-1&stc=&stm=0&page=191
+2026-05-19 08:14:31 rows: 15
+2026-05-19 08:14:31 https://kabutan.jp/warning/trading_value_ranking?market=0&capitalization=-1&stc=&stm=0&page=192
+2026-05-19 08:14:32 rows: 15
+2026-05-19 08:14:32 https://kabutan.jp/warning/trading_value_ranking?market=0&capitalization=-1&stc=&stm=0&page=193
+2026-05-19 08:14:33 rows: 15
+2026-05-19 08:14:33 https://kabutan.jp/warning/trading_value_ranking?market=0&capitalization=-1&stc=&stm=0&page=194
+2026-05-19 08:14:34 rows: 15
+2026-05-19 08:14:34 https://kabutan.jp/warning/trading_value_ranking?market=0&capitalization=-1&stc=&stm=0&page=195
+2026-05-19 08:14:34 rows: 15
+2026-05-19 08:14:34 https://kabutan.jp/warning/trading_value_ranking?market=0&capitalization=-1&stc=&stm=0&page=196
+2026-05-19 08:14:35 rows: 15
+2026-05-19 08:14:35 https://kabutan.jp/warning/trading_value_ranking?market=0&capitalization=-1&stc=&stm=0&page=197
+2026-05-19 08:14:36 rows: 15
+2026-05-19 08:14:36 https://kabutan.jp/warning/trading_value_ranking?market=0&capitalization=-1&stc=&stm=0&page=198
+2026-05-19 08:14:37 rows: 15
+2026-05-19 08:14:37 https://kabutan.jp/warning/trading_value_ranking?market=0&capitalization=-1&stc=&stm=0&page=199
+2026-05-19 08:14:37 rows: 15
+2026-05-19 08:14:37 https://kabutan.jp/warning/trading_value_ranking?market=0&capitalization=-1&stc=&stm=0&page=200
+2026-05-19 08:14:38 rows: 15
+2026-05-19 08:14:38 完了
