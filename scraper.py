@@ -1,54 +1,28 @@
-import os
-import csv
 import requests
 from bs4 import BeautifulSoup
+import csv
 from datetime import datetime
+import os
 
-# =========================
-# 設定
-# =========================
 FOLDER = "output"
 os.makedirs(FOLDER, exist_ok=True)
 
-TOTAL_PAGES = 2  # ★切り分け用
-TOP_N = 30
+TOTAL_PAGES = 2
+TOP_N = 3000  # 戻す
 
 BASE_URL = "https://kabutan.jp/warning/trading_value_ranking?market=0&capitalization=-1&stc=&stm=0&page="
 
 today = datetime.now().strftime("%Y%m%d")
 csv_path = os.path.join(FOLDER, f"trading_value_ranking_{today}.csv")
 
-log_file = os.path.join(FOLDER, "log.txt")
-
-# =========================
-# ログ
-# =========================
-def log(msg):
-    t = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    text = f"{t} {msg}"
-    print(text)
-    with open(log_file, "a", encoding="utf-8") as f:
-        f.write(text + "\n")
-
-# =========================
-# ヘッダ
-# =========================
 headers = {
-    "User-Agent": (
-        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
-        "AppleWebKit/537.36 (KHTML, like Gecko) "
-        "Chrome/124.0 Safari/537.36"
-    ),
-    "Referer": "https://kabutan.jp/",
-    "Accept-Language": "ja-JP,ja;q=0.9"
+    "User-Agent": "Mozilla/5.0"
 }
 
-log("開始（デバッグモード）")
-
-rank = 1
+def clean(text):
+    return text.replace("\n", "").replace("\t", "").strip()
 
 with open(csv_path, "w", newline="", encoding="utf-8") as f:
-
     writer = csv.writer(f)
 
     writer.writerow([
@@ -57,41 +31,78 @@ with open(csv_path, "w", newline="", encoding="utf-8") as f:
         "PER","PBR","利回り"
     ])
 
+    rank = 1
+
     for page in range(1, TOTAL_PAGES + 1):
 
         url = BASE_URL + str(page)
-        log(f"URL: {url}")
+        print("GET:", url)
 
         res = requests.get(url, headers=headers, timeout=20)
 
-        log(f"HTTP: {res.status_code}")
-
-        if res.status_code != 200:
-            log(res.text[:300])
-            continue
+        # ★403対策チェック
+        if "403 Forbidden" in res.text:
+            print("403検知 → 終了")
+            break
 
         soup = BeautifulSoup(res.text, "html.parser")
 
         table = soup.select_one("table.stock_table.st_market")
-
         if not table:
-            log("tableなし")
-            log(res.text[:500])
+            print("tableなし")
             continue
 
         rows = table.select("tbody tr")
 
-        log(f"rows: {len(rows)}")
+        print("rows:", len(rows))
 
-        # =========================
-        # ★デバッグ核心部分
-        # =========================
-        for i, row in enumerate(rows):
+        for row in rows:
 
-            raw = row.get_text(" | ", strip=True)
-            log(f"ROW[{i}] {raw}")
+            # 余計な行除外（重要）
+            if row.find("th") is None:
+                continue
 
-            # ★ここで一旦停止（パースしない）
-            continue
+            code_td = row.select_one("td.tac a")
+            name_th = row.select_one("th.tal")
 
-log("完了")
+            tds = row.find_all("td")
+
+            if not code_td or not name_th:
+                continue
+
+            try:
+                code = clean(code_td.text)
+                name = clean(name_th.text)
+
+                # tdの構造は固定（あなたのHTMLベース）
+                # [0]=市場, [2]=株価, [4]=前日比, [5]=%, [6]=売買代金, [7]=PER, [8]=PBR, [9]=利回り
+                market = clean(tds[0].text)
+                price = clean(tds[2].text)
+
+                diff = clean(tds[4].text)
+                diff_pct = clean(tds[5].text).replace("%", "")
+                trading_value = clean(tds[6].text).replace(",", "")
+
+                per = clean(tds[7].text)
+                pbr = clean(tds[8].text)
+                yield_ = clean(tds[9].text)
+
+                writer.writerow([
+                    rank, code, name, market,
+                    price, diff, diff_pct,
+                    trading_value, per, pbr, yield_
+                ])
+
+                rank += 1
+
+                if rank > TOP_N:
+                    break
+
+            except Exception as e:
+                print("error:", e)
+                continue
+
+        if rank > TOP_N:
+            break
+
+print("done:", csv_path)
