@@ -3,112 +3,38 @@ import csv
 import requests
 from bs4 import BeautifulSoup
 from datetime import datetime
-import glob
-import pandas as pd
 
 # =========================
 # 設定
 # =========================
-FOLDER = os.path.join(os.getcwd(), "output")
+FOLDER = "output"
 os.makedirs(FOLDER, exist_ok=True)
 
 TOTAL_PAGES = 200
 TOP_N = 3000
 
-BASE_URL = (
-    "https://kabutan.jp/warning/trading_value_ranking"
-    "?market=0&capitalization=-1&dispmode=normal&stc=&stm=0&page="
-)
+BASE_URL = "https://kabutan.jp/warning/trading_value_ranking?market=0&capitalization=-1&stc=&stm=0&page="
 
 today = datetime.now().strftime("%Y%m%d")
+csv_path = os.path.join(FOLDER, f"trading_value_ranking_{today}.csv")
 
-filename = os.path.join(
-    FOLDER,
-    f"trading_value_ranking_{today}.csv"
-)
+log_file = os.path.join(FOLDER, "log.txt")
 
-log_file = os.path.join(FOLDER, "trading_value_ranking.log")
-
-# =========================
-# ログ
-# =========================
 def log(msg):
     t = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    text = f"{t} {msg}"
-    print(text)
+    print(f"{t} {msg}")
     with open(log_file, "a", encoding="utf-8") as f:
-        f.write(text + "\n")
+        f.write(f"{t} {msg}\n")
 
-# =========================
-# ヘッダ
-# =========================
 headers = {
-    "User-Agent": (
-        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
-        "AppleWebKit/537.36 (KHTML, like Gecko) "
-        "Chrome/124.0.0.0 Safari/537.36"
-    )
+    "User-Agent": "Mozilla/5.0"
 }
 
-# =========================
-# 解析関数（重要）
-# =========================
-def parse_row(row):
-
-    th = row.find("th")
-    tds = row.find_all("td")
-
-    if not th or len(tds) < 7:
-        return None
-
-    try:
-        # 銘柄（コード + 名前）
-        th_text = th.get_text(" ", strip=True)
-        parts = th_text.split()
-
-        if len(parts) < 2:
-            return None
-
-        code = parts[0]
-        name = parts[1]
-
-        market = tds[0].get_text(strip=True)
-        price = tds[1].get_text(strip=True)
-
-        diff = tds[2].get_text(strip=True)
-        diff_pct = tds[3].get_text(strip=True).replace("%", "")
-
-        trading_value = tds[4].get_text(strip=True).replace(",", "")
-
-        per = tds[5].get_text(strip=True).replace("倍", "")
-        pbr = tds[6].get_text(strip=True).replace("倍", "")
-        yield_ = tds[7].get_text(strip=True).replace("%", "")
-
-        return [
-            code,
-            name,
-            market,
-            price,
-            diff,
-            diff_pct,
-            trading_value,
-            per,
-            pbr,
-            yield_
-        ]
-
-    except Exception:
-        return None
-
-# =========================
-# 開始
-# =========================
-log("【開始】")
+log("開始")
 
 rank = 1
 
-with open(filename, "w", newline="", encoding="utf-8") as f:
-
+with open(csv_path, "w", newline="", encoding="utf-8") as f:
     writer = csv.writer(f)
 
     writer.writerow([
@@ -122,83 +48,73 @@ with open(filename, "w", newline="", encoding="utf-8") as f:
         url = BASE_URL + str(page)
         log(url)
 
-        try:
-            res = requests.get(url, headers=headers, timeout=20)
-        except Exception as e:
-            log(f"リクエスト失敗: {e}")
-            continue
+        res = requests.get(url, headers=headers, timeout=20)
 
         if res.status_code != 200:
-            log(f"HTTPエラー: {res.status_code}")
+            log(f"HTTPエラー {res.status_code}")
             continue
 
         soup = BeautifulSoup(res.text, "html.parser")
 
-        rows = soup.find_all("tr")
+        # ★ここが正解ポイント
+        table = soup.select_one("table.stock_table.st_market")
 
-        log(f"tr数: {len(rows)}")
+        if not table:
+            log("tableなし")
+            continue
+
+        rows = table.select("tbody tr")
+
+        log(f"rows: {len(rows)}")
 
         for row in rows:
 
-            data = parse_row(row)
+            th = row.find("th")
+            tds = row.find_all("td")
 
-            if not data:
+            if not th or len(tds) < 8:
                 continue
 
-            writer.writerow([rank] + data)
+            try:
+                # コード + 銘柄名
+                code = th.find("a").text.strip()
+                name = th.text.replace(code, "").strip()
 
-            log(f"保存 {rank} {data[0]} {data[1]}")
+                market = tds[0].text.strip()
+                price = tds[2].text.strip()
 
-            rank += 1
+                diff = tds[4].text.strip()
+                diff_pct = tds[5].text.replace("%", "").strip()
 
-            if rank > TOP_N:
-                break
+                trading_value = tds[6].text.replace(",", "").strip()
+
+                per = tds[7].text.strip().replace("倍", "")
+                pbr = tds[8].text.strip().replace("倍", "")
+                yield_ = tds[9].text.strip().replace("%", "")
+
+                writer.writerow([
+                    rank,
+                    code,
+                    name,
+                    market,
+                    price,
+                    diff,
+                    diff_pct,
+                    trading_value,
+                    per,
+                    pbr,
+                    yield_
+                ])
+
+                rank += 1
+
+                if rank > TOP_N:
+                    break
+
+            except Exception:
+                continue
 
         if rank > TOP_N:
             break
-
-log("データ取得完了")
-
-# =========================
-# merged（本番復活）
-# =========================
-log("merged作成開始")
-
-files = sorted(
-    glob.glob(os.path.join(FOLDER, "trading_value_ranking_*.csv"))
-)
-
-df_list = []
-
-for file in files:
-
-    try:
-        df = pd.read_csv(file, encoding="utf-8")
-        df.insert(
-            0,
-            "日付",
-            file.split("_")[-1].replace(".csv", "")
-        )
-        df_list.append(df)
-
-    except Exception as e:
-        log(f"読込失敗: {file} {e}")
-
-if df_list:
-
-    df_all = pd.concat(df_list, ignore_index=True)
-
-    merged_file = os.path.join(
-        FOLDER,
-        "trading_value_ranking_merged.csv"
-    )
-
-    df_all.to_csv(
-        merged_file,
-        index=False,
-        encoding="utf-8"
-    )
-
-    log(f"merged完了: {merged_file}")
 
 log("完了")
