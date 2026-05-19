@@ -1,0 +1,37 @@
+2026-05-19 07:35:59 比較ファイル: なし
+2026-05-19 07:35:59 【開始】
+2026-05-19 07:35:59 Chrome 起動
+2026-05-19 07:36:10 Chrome 起動完了
+2026-05-19 07:36:10 1/2
+2026-05-19 07:36:10 https://kabutan.jp/warning/trading_value_ranking?market=0&capitalization=-1&dispmode=normal&stc=&stm=0&page=1
+2026-05-19 07:36:15 取得行数: 0
+2026-05-19 07:36:15 <html><head><title>403 Forbidden</title></head>
+<body>
+<center><h1>403 Forbidden</h1></center>
+
+
+
+
+
+
+
+
+</body></html>
+2026-05-19 07:36:15 2/2
+2026-05-19 07:36:15 https://kabutan.jp/warning/trading_value_ranking?market=0&capitalization=-1&dispmode=normal&stc=&stm=0&page=2
+2026-05-19 07:36:19 取得行数: 0
+2026-05-19 07:36:19 <html><head><title>403 Forbidden</title></head>
+<body>
+<center><h1>403 Forbidden</h1></center>
+
+
+
+
+
+
+
+
+</body></html>
+2026-05-19 07:36:19 終了
+2026-05-19 07:36:19 比較保存OK
+2026-05-19 07:36:19 完了
