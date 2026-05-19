@@ -1,12 +1,25 @@
+import os
 import time
+import csv
+from datetime import datetime
 
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.common.by import By
 
 # =========================
-# URL
+# 設定
 # =========================
+FOLDER = "output"
+os.makedirs(FOLDER, exist_ok=True)
+
+today = datetime.now().strftime("%Y%m%d")
+
+file_path = os.path.join(
+    FOLDER,
+    f"trading_value_ranking_{today}.csv"
+)
+
 url = "https://kabutan.jp/warning/trading_value_ranking?market=0&capitalization=-1&dispmode=normal&stc=&stm=0&page=1"
 
 # =========================
@@ -25,85 +38,122 @@ options.add_argument(
     "--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
 )
 
-print("Chrome起動開始")
+# =========================
+# Chrome起動
+# =========================
+print("Chrome起動")
 
 driver = webdriver.Chrome(options=options)
 
-print("ページアクセス開始")
+# =========================
+# ページアクセス
+# =========================
+print("ページ取得開始")
 
 driver.get(url)
 
 # JS描画待ち
 time.sleep(5)
 
-print("ページタイトル:")
-print(driver.title)
-
-print("=" * 50)
+print("ページタイトル:", driver.title)
 
 # =========================
-# HTML先頭確認
-# =========================
-html = driver.page_source
-
-print("HTML先頭1000文字")
-print(html[:1000])
-
-print("=" * 50)
-
-# =========================
-# tbody確認
-# =========================
-tbodies = driver.find_elements(By.TAG_NAME, "tbody")
-
-print("tbody数:", len(tbodies))
-
-print("=" * 50)
-
-# =========================
-# tr確認
+# 行取得
 # =========================
 rows = driver.find_elements(By.CSS_SELECTOR, "tbody tr")
 
-print("tr数:", len(rows))
+print("取得行数:", len(rows))
 
-print("=" * 50)
+data = []
 
 # =========================
-# 1行目確認
+# 15件取得
 # =========================
-if len(rows) > 0:
+for row in rows[:15]:
 
-    first_row = rows[0]
+    try:
+        # =========================
+        # th取得
+        # =========================
+        th = row.find_element(By.TAG_NAME, "th")
 
-    print("1行目テキスト:")
-    print(first_row.text)
+        lines = th.text.split("\n")
 
-    print("=" * 50)
+        code = lines[0].strip() if len(lines) > 0 else ""
+        name = lines[1].strip() if len(lines) > 1 else ""
+        market = lines[2].strip() if len(lines) > 2 else ""
 
-    # td確認
-    tds = first_row.find_elements(By.TAG_NAME, "td")
+        # =========================
+        # td取得
+        # =========================
+        tds = row.find_elements(By.TAG_NAME, "td")
 
-    print("td数:", len(tds))
+        if len(tds) < 7:
+            continue
 
-    for i, td in enumerate(tds):
-        print(f"td[{i}] = {td.text}")
+        price = tds[0].text.strip()
+        diff = tds[1].text.strip()
+        diff_percent = tds[2].text.strip()
+        trading_value = tds[3].text.strip()
+        per = tds[4].text.strip()
+        pbr = tds[5].text.strip()
+        dividend = tds[6].text.strip()
 
-    print("=" * 50)
+        # デバッグ表示
+        print(
+            code,
+            name,
+            market,
+            price,
+            diff,
+            diff_percent,
+            trading_value,
+            per,
+            pbr,
+            dividend
+        )
 
-    # th確認
-    ths = first_row.find_elements(By.TAG_NAME, "th")
+        data.append([
+            code,
+            name,
+            market,
+            price,
+            diff,
+            diff_percent,
+            trading_value,
+            per,
+            pbr,
+            dividend
+        ])
 
-    print("th数:", len(ths))
+    except Exception as e:
+        print("ERROR:", e)
 
-    for i, th in enumerate(ths):
-        print(f"th[{i}] = {th.text}")
-
-else:
-    print("rowsが0件です")
-
-print("=" * 50)
-
-print("終了")
-
+# =========================
+# ブラウザ終了
+# =========================
 driver.quit()
+
+# =========================
+# CSV保存
+# =========================
+with open(file_path, "w", newline="", encoding="utf-8") as f:
+
+    writer = csv.writer(f)
+
+    writer.writerow([
+        "コード",
+        "銘柄名",
+        "市場",
+        "株価",
+        "前日比",
+        "前日比(%)",
+        "売買代金",
+        "PER",
+        "PBR",
+        "利回り"
+    ])
+
+    writer.writerows(data)
+
+print(f"CSV保存完了: {file_path}")
