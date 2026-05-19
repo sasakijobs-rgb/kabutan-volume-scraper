@@ -1,159 +1,120 @@
 import os
 import time
+import random
 import csv
 from datetime import datetime
-
 from selenium import webdriver
+from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.common.by import By
+from webdriver_manager.chrome import ChromeDriverManager
 
 # =========================
 # 設定
 # =========================
-FOLDER = "output"
-os.makedirs(FOLDER, exist_ok=True)
+URL = "https://kabutan.jp/warning/trading_value_ranking?market=0&capitalization=-1&dispmode=normal&stc=&stm=0&page=1"
 
-today = datetime.now().strftime("%Y%m%d")
-
-file_path = os.path.join(
-    FOLDER,
-    f"trading_value_ranking_{today}.csv"
-)
-
-url = "https://kabutan.jp/warning/trading_value_ranking?market=0&capitalization=-1&dispmode=normal&stc=&stm=0&page=1"
+# =========================
+# ログ
+# =========================
+def log(msg):
+    print(f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')} {msg}")
 
 # =========================
 # Selenium設定
 # =========================
 options = Options()
-
-options.add_argument("--headless=new")
+options.add_argument("--headless")
 options.add_argument("--no-sandbox")
 options.add_argument("--disable-dev-shm-usage")
-options.add_argument("--disable-gpu")
-options.add_argument("--window-size=1920,1080")
+options.add_argument("--user-agent=Mozilla/5.0")
 
-# bot判定軽減
-options.add_argument(
-    "--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
+driver = webdriver.Chrome(
+    service=Service(ChromeDriverManager().install()),
+    options=options
 )
 
-# =========================
-# Chrome起動
-# =========================
-print("Chrome起動")
+log("【取得開始】")
 
-driver = webdriver.Chrome(options=options)
+try:
+    driver.get(URL)
+    time.sleep(2 + random.random())
 
-# =========================
-# ページアクセス
-# =========================
-print("ページ取得開始")
+    rows = driver.find_elements(By.CSS_SELECTOR, "tbody tr")
 
-driver.get(url)
+    if not rows:
+        log("データが取得できません")
+        raise SystemExit
 
-# JS描画待ち
-time.sleep(5)
+    # =========================
+    # ★ 1件のみ取得
+    # =========================
+    row = rows[0]
 
-print("ページタイトル:", driver.title)
+    # 銘柄名
+    name_elem = row.find_elements(By.CSS_SELECTOR, "th a p, th a abbr")
+    name = name_elem[0].text.strip() if name_elem else ""
 
-# =========================
-# 行取得
-# =========================
-rows = driver.find_elements(By.CSS_SELECTOR, "tbody tr")
+    # コード・市場
+    code, market = "", ""
+    code_market = row.find_elements(By.CSS_SELECTOR, "th a div.flex")
+    if code_market:
+        parts = code_market[0].text.split()
+        if len(parts) >= 1:
+            code = parts[0].strip()
+        if len(parts) >= 2:
+            market = parts[1].strip()
 
-print("取得行数:", len(rows))
+    # TD取得
+    tds = row.find_elements(By.TAG_NAME, "td")
+    if len(tds) < 7:
+        log("列不足のため終了")
+        raise SystemExit
 
-data = []
+    price = tds[0].text.strip()
 
-# =========================
-# 15件取得
-# =========================
-for row in rows[:15]:
+    prev_text = tds[1].text.split("\n")
+    prev_diff = prev_text[0].strip() if len(prev_text) > 0 else ""
+    prev_diff_percent = prev_text[1].replace("%", "").strip() if len(prev_text) > 1 else ""
+
+    volume = tds[2].text.replace("株", "").replace(",", "").strip()
+    per = tds[4].text.replace("倍", "").strip()
+    pbr = tds[5].text.replace("倍", "").strip()
+    yield_ = tds[6].text.replace("%", "").strip()
 
     try:
-        # =========================
-        # th取得
-        # =========================
-        th = row.find_element(By.TAG_NAME, "th")
+        trade_amount = int(float(price.replace(",", "")) * float(volume))
+    except:
+        trade_amount = 0
 
-        lines = th.text.split("\n")
+    # =========================
+    # ★ Display（確認表示）
+    # =========================
+    print("\n==============================")
+    print("DISPLAY: 取得データ確認（1件）")
+    print("==============================")
 
-        code = lines[0].strip() if len(lines) > 0 else ""
-        name = lines[1].strip() if len(lines) > 1 else ""
-        market = lines[2].strip() if len(lines) > 2 else ""
+    print(f"コード            : {code}")
+    print(f"銘柄名            : {name}")
+    print(f"市場              : {market}")
+    print(f"株価              : {price}")
+    print(f"前日比            : {prev_diff}")
+    print(f"前日比(%)         : {prev_diff_percent}")
+    print(f"出来高            : {volume}")
+    print(f"PER               : {per}")
+    print(f"PBR               : {pbr}")
+    print(f"利回り            : {yield_}")
+    print(f"売買代金(概算)    : {trade_amount}")
 
-        # =========================
-        # td取得
-        # =========================
-        tds = row.find_elements(By.TAG_NAME, "td")
+    print("==============================\n")
 
-        if len(tds) < 7:
-            continue
+    # =========================
+    # ※DB投入イメージ（未実装）
+    # stock_table st_market にINSERT可能
+    # =========================
+    log("stock_table st_market 用データ取得完了（未保存）")
 
-        price = tds[0].text.strip()
-        diff = tds[1].text.strip()
-        diff_percent = tds[2].text.strip()
-        trading_value = tds[3].text.strip()
-        per = tds[4].text.strip()
-        pbr = tds[5].text.strip()
-        dividend = tds[6].text.strip()
-
-        # デバッグ表示
-        print(
-            code,
-            name,
-            market,
-            price,
-            diff,
-            diff_percent,
-            trading_value,
-            per,
-            pbr,
-            dividend
-        )
-
-        data.append([
-            code,
-            name,
-            market,
-            price,
-            diff,
-            diff_percent,
-            trading_value,
-            per,
-            pbr,
-            dividend
-        ])
-
-    except Exception as e:
-        print("ERROR:", e)
-
-# =========================
-# ブラウザ終了
-# =========================
-driver.quit()
-
-# =========================
-# CSV保存
-# =========================
-with open(file_path, "w", newline="", encoding="utf-8") as f:
-
-    writer = csv.writer(f)
-
-    writer.writerow([
-        "コード",
-        "銘柄名",
-        "市場",
-        "株価",
-        "前日比",
-        "前日比(%)",
-        "売買代金",
-        "PER",
-        "PBR",
-        "利回り"
-    ])
-
-    writer.writerows(data)
-
-print(f"CSV保存完了: {file_path}")
+finally:
+    driver.quit()
+    log("ブラウザ終了")
+    log("【取得終了】")
