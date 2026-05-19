@@ -1,212 +1,126 @@
-import os
-import time
-import csv
-from datetime import datetime
-
-from selenium import webdriver
-from selenium.webdriver.chrome.options import Options
-from selenium.webdriver.chrome.service import Service
-from selenium.webdriver.common.by import By
-from webdriver_manager.chrome import ChromeDriverManager
-
-# =========================
-# 設定
-# =========================
-FOLDER = "output"
-os.makedirs(FOLDER, exist_ok=True)
-
-today = datetime.now().strftime("%Y%m%d")
-
-file_path = os.path.join(
-    FOLDER,
-    f"trading_value_ranking_{today}.csv"
-)
-
-url = "https://kabutan.jp/warning/trading_value_ranking?market=0&capitalization=-1&dispmode=normal&stc=&stm=0&page=1"
-
-# =========================
-# Chrome Options（重要）
-# =========================
-options = Options()
-
-options.add_argument("--headless=new")
-options.add_argument("--no-sandbox")
-options.add_argument("--disable-dev-shm-usage")
 options.add_argument("--disable-gpu")
 options.add_argument("--window-size=1920,1080")
-options.add_argument("--remote-debugging-port=9222")
 
+# bot判定軽減
 options.add_argument(
-    "--user-agent=Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+    "--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
+    "--user-agent=Mozilla/5.0"
 )
-
-options.add_argument("--disable-blink-features=AutomationControlled")
 
 # =========================
-# Chrome起動
-# =========================
-print("Chrome起動開始")
+@@ -52,7 +51,6 @@
 
-driver = webdriver.Chrome(
-    service=Service(ChromeDriverManager().install()),
-    options=options
-)
+driver.get(url)
 
-# webdriverフラグ無効化（軽いbot対策）
-driver.execute_script(
-    "Object.defineProperty(navigator, 'webdriver', {get: () => undefined})"
-)
+# JS描画待ち
+time.sleep(5)
+
+print("ページタイトル:", driver.title)
+@@ -72,35 +70,40 @@
+for row in rows:
 
 try:
 
-    # =========================
-    # ページアクセス
-    # =========================
-    print("ページアクセス開始")
-
-    driver.get(url)
-
-    time.sleep(5)
-
-    print("ページタイトル:")
-    print(driver.title)
-
-    # =========================
-    # tbody確認
-    # =========================
-    tbodies = driver.find_elements(By.TAG_NAME, "tbody")
-
-    print("=" * 80)
-    print("tbody数:", len(tbodies))
-
-    all_rows = driver.find_elements(By.CSS_SELECTOR, "tbody tr")
-
-    print("全tr数:", len(all_rows))
-
-    # =========================
-    # ランキング行抽出
-    # =========================
-    rows = []
-
-    for row in all_rows:
-        if row.find_elements(By.TAG_NAME, "th"):
-            rows.append(row)
-
-    print("ランキング行数:", len(rows))
-
-    # =========================
-    # 1件デバッグ（重要）
-    # =========================
-    print("=" * 80)
-    print("1件デバッグ開始")
-    print("=" * 80)
-
-    if rows:
-
-        row = rows[0]
-
-        print("\n■ outerHTML")
-        print(row.get_attribute("outerHTML")[:1500])
-
+# =========================
+        # th取得
+        # 銘柄名取得
+# =========================
         ths = row.find_elements(By.TAG_NAME, "th")
-        tds = row.find_elements(By.TAG_NAME, "td")
+        name_elem = row.find_elements(
+            By.CSS_SELECTOR,
+            "th a p, th a abbr"
+        )
 
-        print("\n■ th数:", len(ths))
-        print("■ td数:", len(tds))
+        # thが無い行はスキップ
+        if not ths:
+        if not name_elem:
+continue
 
-        lines = []
+        th = ths[0]
+        name = name_elem[0].text.strip()
 
-        if ths:
-            print("\n■ th.text")
-            print(ths[0].text)
+        parts = th.text.split()
 
-            lines = [
-                x.strip()
-                for x in ths[0].text.split("\n")
-                if x.strip()
-            ]
+        # 初期化
+        name = ""
+        # =========================
+        # コード・市場取得
+        # =========================
+code = ""
+market = ""
 
-            print("\n■ th分解")
-            for i, v in enumerate(lines):
-                print(f"th[{i}] = {v}")
+        # =========================
+        # データ解析
+        # =========================
+        if len(parts) >= 1:
+            name = parts[0]
+        code_market = row.find_elements(
+            By.CSS_SELECTOR,
+            "th a div.flex"
+        )
 
-        for i, td in enumerate(tds):
-            print(f"td[{i}] = {td.text}")
+        if len(parts) >= 2:
+            code = parts[1]
+        if code_market:
 
-    # =========================
-    # CSVデータ取得
-    # =========================
-    data = []
+        if len(parts) >= 3:
+            market = parts[2]
+            parts = code_market[0].text.split()
 
-    for row in rows:
+            if len(parts) >= 1:
+                code = parts[0].strip()
 
-        try:
+            if len(parts) >= 2:
+                market = parts[1].strip()
 
-            ths = row.find_elements(By.TAG_NAME, "th")
-            if not ths:
-                continue
+# =========================
+# td取得
+@@ -111,14 +114,18 @@
+continue
 
-            lines = [
-                x.strip()
-                for x in ths[0].text.split("\n")
-                if x.strip()
-            ]
+price = tds[0].text.strip()
+        diff = tds[1].text.strip()
+        diff_percent = tds[2].text.strip()
 
-            code = lines[0] if len(lines) > 0 else ""
-            name = lines[1] if len(lines) > 1 else ""
-            market = lines[2] if len(lines) > 2 else ""
+        # 前日比
+        diff_parts = tds[1].text.split("\n")
 
-            tds = row.find_elements(By.TAG_NAME, "td")
-            if len(tds) < 7:
-                continue
+        diff = diff_parts[0].strip() if len(diff_parts) > 0 else ""
+        diff_percent = diff_parts[1].strip() if len(diff_parts) > 1 else ""
 
-            price = tds[0].text
-            diff = tds[1].text
-            value = tds[3].text
-            per = tds[4].text
-            pbr = tds[5].text
-            dividend = tds[6].text
+trading_value = tds[3].text.strip()
+per = tds[4].text.strip()
+pbr = tds[5].text.strip()
+dividend = tds[6].text.strip()
 
-            data.append([
-                code,
-                name,
-                market,
-                price,
-                diff,
-                value,
-                per,
-                pbr,
-                dividend
-            ])
+        # デバッグ表示
+print(
+code,
+name,
+@@ -132,7 +139,9 @@
+dividend
+)
 
-        except Exception as e:
-            print("ERROR:", e)
+        # データ保存
+        # =========================
+        # 保存
+        # =========================
+data.append([
+code,
+name,
+@@ -146,7 +155,6 @@
+dividend
+])
 
-    # =========================
-    # CSV保存
-    # =========================
-    with open(file_path, "w", newline="", encoding="utf-8-sig") as f:
+        # 15件だけ
+if len(data) >= 15:
+break
 
-        writer = csv.writer(f)
+@@ -161,7 +169,7 @@
+# =========================
+# CSV保存
+# =========================
+with open(file_path, "w", newline="", encoding="utf-8") as f:
+with open(file_path, "w", newline="", encoding="utf-8-sig") as f:
 
-        writer.writerow([
-            "コード",
-            "銘柄名",
-            "市場",
-            "株価",
-            "前日比",
-            "売買代金",
-            "PER",
-            "PBR",
-            "利回り"
-        ])
-
-        writer.writerows(data)
-
-    print("=" * 80)
-    print("CSV保存完了:", file_path)
-
-finally:
-    driver.quit()
-    print("=" * 80)
-    print("終了")
+writer = csv.writer(f)
