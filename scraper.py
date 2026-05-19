@@ -19,9 +19,9 @@ MAX_FILES = 150
 FOLDER = os.path.join(os.getcwd(), "output")
 
 # 15件 × 200ページ = 3000件
-TOTAL_PAGES = 200
+TOTAL_PAGES = 2
 
-TOP_N = 3000
+TOP_N = 30
 
 BASE_URL = (
     "https://kabutan.jp/warning/trading_value_ranking"
