@@ -4,18 +4,18 @@ import random
 import csv
 from datetime import datetime
 import glob
-from selenium import webdriver
-from selenium.webdriver.chrome.service import Service
-from selenium.webdriver.chrome.options import Options
-from selenium.webdriver.common.by import By
-from webdriver_manager.chrome import ChromeDriverManager
 import pandas as pd
 import sys
+
+from selenium import webdriver
+from selenium.webdriver.common.by import By
+from selenium.webdriver.chrome.options import Options
 
 # =========================
 # 設定
 # =========================
 MAX_FILES = 150
+
 FOLDER = os.path.join(os.getcwd(), "output")
 
 # テスト用
@@ -32,10 +32,16 @@ os.makedirs(FOLDER, exist_ok=True)
 # =========================
 # ログ関数
 # =========================
-log_file = os.path.join(FOLDER, "trading_value_ranking.log")
+log_file = os.path.join(
+    FOLDER,
+    "trading_value_ranking.log"
+)
 
 def log(msg):
-    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+    timestamp = datetime.now().strftime(
+        "%Y-%m-%d %H:%M:%S"
+    )
 
     text = f"{timestamp} {msg}"
 
@@ -53,6 +59,7 @@ first_page_file = os.path.join(
 )
 
 if os.path.exists(first_page_file):
+
     prev_head15 = open(
         first_page_file,
         "r",
@@ -62,7 +69,9 @@ if os.path.exists(first_page_file):
     log(f"比較ファイル: {os.path.basename(first_page_file)}")
 
 else:
+
     prev_head15 = []
+
     log("比較ファイル: なし")
 
 # =========================
@@ -80,12 +89,20 @@ filename = os.path.join(
 # =========================
 options = Options()
 
-# headless無効（画面確認用）
-# options.add_argument("--headless")
-
+# GitHub Actions対応
+options.add_argument("--headless=new")
 options.add_argument("--no-sandbox")
 options.add_argument("--disable-dev-shm-usage")
-options.add_argument("--user-agent=Mozilla/5.0")
+options.add_argument("--disable-gpu")
+options.add_argument("--window-size=1920,1080")
+
+options.add_argument(
+    "--user-agent=Mozilla/5.0 "
+    "(Windows NT 10.0; Win64; x64) "
+    "AppleWebKit/537.36 "
+    "(KHTML, like Gecko) "
+    "Chrome/124.0.0.0 Safari/537.36"
+)
 
 driver = None
 
@@ -93,26 +110,30 @@ start_time = datetime.now()
 
 rank = 1
 
+first_page_rows_text = []
+
 log("【売買代金ランキング取得 開始】")
 
 try:
 
     # =========================
-    # Chrome起動確認
+    # Chrome起動
     # =========================
-    log("ChromeDriver install 開始")
+    log("Chrome 起動開始")
 
-    driver = webdriver.Chrome(
-        service=Service(ChromeDriverManager().install()),
-        options=options
-    )
+    driver = webdriver.Chrome(options=options)
 
     log("Chrome 起動完了")
 
     # =========================
     # CSV作成
     # =========================
-    with open(filename, "w", newline="", encoding="utf-8") as f:
+    with open(
+        filename,
+        "w",
+        newline="",
+        encoding="utf-8"
+    ) as f:
 
         writer = csv.writer(f)
 
@@ -130,8 +151,6 @@ try:
             "利回り(%)"
         ])
 
-        first_page_rows_text = []
-
         # =========================
         # ページ巡回
         # =========================
@@ -144,10 +163,13 @@ try:
             log(f"URL: {url}")
 
             try:
+
                 driver.get(url)
 
             except Exception as e:
+
                 log(f"ページ取得エラー: {e}")
+
                 continue
 
             # 読み込み待機
@@ -163,12 +185,14 @@ try:
 
             log(f"取得行数: {len(rows)}")
 
+            # HTML確認
             if not rows:
 
                 log("HTML先頭確認")
-                log(driver.page_source[:3000])
 
-                log("行が取得できません")
+                html_preview = driver.page_source[:3000]
+
+                log(html_preview)
 
                 continue
 
@@ -177,31 +201,42 @@ try:
             # =========================
             for i, row in enumerate(rows):
 
-                row_text = row.text.replace("\n", " ").strip()
-
-                log(f"row[{i}] = {row_text[:100]}")
-
-                # =========================
-                # 比較用保存
-                # =========================
-                if page_no == 1 and i < 15:
-                    first_page_rows_text.append(row_text)
-
-                # =========================
-                # 前回比較
-                # =========================
-                if (
-                    page_no == 1
-                    and i < 15
-                    and prev_head15
-                    and i < len(prev_head15)
-                ):
-
-                    if row_text == prev_head15[i]:
-                        log("前回と同じデータのため終了")
-                        sys.exit(0)
-
                 try:
+
+                    row_text = (
+                        row.text
+                        .replace("\n", " ")
+                        .strip()
+                    )
+
+                    log(f"row[{i}] = {row_text[:120]}")
+
+                    # =========================
+                    # 比較保存
+                    # =========================
+                    if page_no == 1 and i < 15:
+
+                        first_page_rows_text.append(
+                            row_text
+                        )
+
+                    # =========================
+                    # 前回比較
+                    # =========================
+                    if (
+                        page_no == 1
+                        and i < 15
+                        and prev_head15
+                        and i < len(prev_head15)
+                    ):
+
+                        if row_text == prev_head15[i]:
+
+                            log(
+                                "前回と同じデータのため終了"
+                            )
+
+                            sys.exit(0)
 
                     # =========================
                     # 銘柄名
@@ -212,10 +247,16 @@ try:
                     )
 
                     if not name_elem:
+
                         log("銘柄名取得失敗")
+
                         continue
 
-                    name = name_elem[0].text.strip()
+                    name = (
+                        name_elem[0]
+                        .text
+                        .strip()
+                    )
 
                     # =========================
                     # コード・市場
@@ -230,7 +271,11 @@ try:
 
                     if code_market:
 
-                        parts = code_market[0].text.split()
+                        parts = (
+                            code_market[0]
+                            .text
+                            .split()
+                        )
 
                         if len(parts) >= 1:
                             code = parts[0].strip()
@@ -241,29 +286,44 @@ try:
                     # =========================
                     # td取得
                     # =========================
-                    tds = row.find_elements(By.TAG_NAME, "td")
+                    tds = row.find_elements(
+                        By.TAG_NAME,
+                        "td"
+                    )
 
                     log(f"td数: {len(tds)}")
 
                     if len(tds) < 7:
+
                         log("td不足")
+
                         continue
 
+                    # =========================
+                    # データ取得
+                    # =========================
                     price = tds[0].text.strip()
 
-                    prev_text = tds[1].text.split("\n")
+                    prev_text = (
+                        tds[1]
+                        .text
+                        .split("\n")
+                    )
 
                     prev_diff = (
                         prev_text[0].strip()
-                        if len(prev_text) > 0 else ""
+                        if len(prev_text) > 0
+                        else ""
                     )
 
                     prev_diff_percent = (
-                        prev_text[1].replace("%", "").strip()
-                        if len(prev_text) > 1 else ""
+                        prev_text[1]
+                        .replace("%", "")
+                        .strip()
+                        if len(prev_text) > 1
+                        else ""
                     )
 
-                    # 売買代金
                     trading_value = (
                         tds[2]
                         .text
@@ -294,7 +354,7 @@ try:
                     )
 
                     # =========================
-                    # CSV書き込み
+                    # CSV保存
                     # =========================
                     writer.writerow([
                         rank,
@@ -320,7 +380,9 @@ try:
                         break
 
                 except Exception as e:
+
                     log(f"行解析エラー: {e}")
+
                     continue
 
             if rank > TOP_N:
@@ -333,7 +395,9 @@ except Exception as e:
 finally:
 
     if driver:
+
         driver.quit()
+
         log("ブラウザ終了")
 
 # =========================
@@ -341,9 +405,14 @@ finally:
 # =========================
 try:
 
-    with open(first_page_file, "w", encoding="utf-8") as f:
+    with open(
+        first_page_file,
+        "w",
+        encoding="utf-8"
+    ) as f:
 
         for line in first_page_rows_text[:15]:
+
             f.write(line + "\n")
 
     log("比較ファイル保存完了")
@@ -366,12 +435,14 @@ all_files = sorted(
 
 if len(all_files) > MAX_FILES:
 
-    for f in all_files[:-MAX_FILES]:
+    for old_file in all_files[:-MAX_FILES]:
 
         try:
-            os.remove(f)
+
+            os.remove(old_file)
 
         except Exception as e:
+
             log(f"削除失敗: {e}")
 
 # =========================
@@ -391,16 +462,20 @@ merge_files = [
 
 df_list = []
 
-for f in merge_files:
+for csv_file in merge_files:
 
     try:
 
-        df = pd.read_csv(f, encoding="utf-8")
+        df = pd.read_csv(
+            csv_file,
+            encoding="utf-8"
+        )
 
         df.insert(
             0,
             "日付",
-            f.split("_")[-1].replace(".csv", "")
+            csv_file.split("_")[-1]
+            .replace(".csv", "")
         )
 
         df_list.append(df)
@@ -413,7 +488,10 @@ if df_list:
 
     try:
 
-        df_all = pd.concat(df_list, ignore_index=True)
+        df_all = pd.concat(
+            df_list,
+            ignore_index=True
+        )
 
         merged_filename = os.path.join(
             FOLDER,
