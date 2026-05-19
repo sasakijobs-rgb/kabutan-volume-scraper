@@ -3,15 +3,17 @@ import csv
 import requests
 from bs4 import BeautifulSoup
 from datetime import datetime
+import glob
+import pandas as pd
 
 # =========================
-# 設定
+# 設定（本番）
 # =========================
 FOLDER = os.path.join(os.getcwd(), "output")
 os.makedirs(FOLDER, exist_ok=True)
 
-TOTAL_PAGES = 2   # テスト
-TOP_N = 30
+TOTAL_PAGES = 200
+TOP_N = 3000
 
 BASE_URL = (
     "https://kabutan.jp/warning/trading_value_ranking"
@@ -128,8 +130,6 @@ with open(filename, "w", newline="", encoding="utf-8") as f:
                     yield_
                 ])
 
-                log(f"保存 {rank} {code} {name}")
-
                 rank += 1
 
                 if rank > TOP_N:
@@ -140,5 +140,49 @@ with open(filename, "w", newline="", encoding="utf-8") as f:
 
         if rank > TOP_N:
             break
+
+log("データ取得完了")
+
+# =========================
+# ★ merged復活（本番）
+# =========================
+log("merged作成開始")
+
+merge_files = sorted(
+    glob.glob(os.path.join(FOLDER, "trading_value_ranking_*.csv"))
+)
+
+df_list = []
+
+for file in merge_files:
+
+    try:
+        df = pd.read_csv(file, encoding="utf-8")
+        df.insert(
+            0,
+            "日付",
+            file.split("_")[-1].replace(".csv", "")
+        )
+        df_list.append(df)
+
+    except Exception as e:
+        log(f"読込失敗: {file} {e}")
+
+if df_list:
+
+    df_all = pd.concat(df_list, ignore_index=True)
+
+    merged_file = os.path.join(
+        FOLDER,
+        "trading_value_ranking_merged.csv"
+    )
+
+    df_all.to_csv(
+        merged_file,
+        index=False,
+        encoding="utf-8"
+    )
+
+    log(f"merged完了: {merged_file}")
 
 log("完了")
