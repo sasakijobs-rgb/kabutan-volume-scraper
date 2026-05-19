@@ -1,27 +1,28 @@
-import requests
-from bs4 import BeautifulSoup
+from selenium import webdriver
+from selenium.webdriver.chrome.options import Options
+from selenium.webdriver.common.by import By
+import time
 
 url = "https://kabutan.jp/warning/trading_value_ranking?market=0&capitalization=-1&dispmode=normal&stc=&stm=0&page=1"
 
-headers = {
-    "User-Agent": "Mozilla/5.0"
-}
+options = Options()
+options.add_argument("--headless")
+options.add_argument("--no-sandbox")
+options.add_argument("--disable-dev-shm-usage")
+options.add_argument("--user-agent=Mozilla/5.0")
 
-res = requests.get(url, headers=headers)
-res.raise_for_status()
+driver = webdriver.Chrome(options=options)
 
-soup = BeautifulSoup(res.text, "html.parser")
+driver.get(url)
+time.sleep(2)
 
-# テーブル取得
-table = soup.find("table")
-
-rows = table.find_all("tr")[1:16]  # ヘッダー除いて15件
+rows = driver.find_elements(By.CSS_SELECTOR, "tbody tr")
 
 data = []
 
-for row in rows:
-    cols = row.find_all("td")
-    
+for i, row in enumerate(rows[:15]):  # ← 15件だけ
+    cols = row.find_elements(By.TAG_NAME, "td")
+
     if len(cols) < 4:
         continue
 
@@ -32,6 +33,7 @@ for row in rows:
 
     data.append([code, name, price, value])
 
-# 表示
+driver.quit()
+
 for d in data:
     print(d)
