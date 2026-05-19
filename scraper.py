@@ -10,7 +10,7 @@ from datetime import datetime
 FOLDER = "output"
 os.makedirs(FOLDER, exist_ok=True)
 
-TOTAL_PAGES = 2
+TOTAL_PAGES = 2  # ★切り分け用
 TOP_N = 30
 
 BASE_URL = "https://kabutan.jp/warning/trading_value_ranking?market=0&capitalization=-1&stc=&stm=0&page="
@@ -20,21 +20,35 @@ csv_path = os.path.join(FOLDER, f"trading_value_ranking_{today}.csv")
 
 log_file = os.path.join(FOLDER, "log.txt")
 
+# =========================
+# ログ
+# =========================
 def log(msg):
     t = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    print(f"{t} {msg}")
+    text = f"{t} {msg}"
+    print(text)
     with open(log_file, "a", encoding="utf-8") as f:
-        f.write(f"{t} {msg}\n")
+        f.write(text + "\n")
 
+# =========================
+# ヘッダ
+# =========================
 headers = {
-    "User-Agent": "Mozilla/5.0"
+    "User-Agent": (
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+        "AppleWebKit/537.36 (KHTML, like Gecko) "
+        "Chrome/124.0 Safari/537.36"
+    ),
+    "Referer": "https://kabutan.jp/",
+    "Accept-Language": "ja-JP,ja;q=0.9"
 }
 
-log("開始")
+log("開始（デバッグモード）")
 
 rank = 1
 
 with open(csv_path, "w", newline="", encoding="utf-8") as f:
+
     writer = csv.writer(f)
 
     writer.writerow([
@@ -46,75 +60,38 @@ with open(csv_path, "w", newline="", encoding="utf-8") as f:
     for page in range(1, TOTAL_PAGES + 1):
 
         url = BASE_URL + str(page)
-        log(url)
+        log(f"URL: {url}")
 
         res = requests.get(url, headers=headers, timeout=20)
 
+        log(f"HTTP: {res.status_code}")
+
         if res.status_code != 200:
-            log(f"HTTPエラー {res.status_code}")
+            log(res.text[:300])
             continue
 
         soup = BeautifulSoup(res.text, "html.parser")
 
-        # ★ここが正解ポイント
         table = soup.select_one("table.stock_table.st_market")
 
         if not table:
             log("tableなし")
+            log(res.text[:500])
             continue
 
         rows = table.select("tbody tr")
 
         log(f"rows: {len(rows)}")
 
-        for row in rows:
+        # =========================
+        # ★デバッグ核心部分
+        # =========================
+        for i, row in enumerate(rows):
 
-            th = row.find("th")
-            tds = row.find_all("td")
+            raw = row.get_text(" | ", strip=True)
+            log(f"ROW[{i}] {raw}")
 
-            if not th or len(tds) < 8:
-                continue
-
-            try:
-                # コード + 銘柄名
-                code = th.find("a").text.strip()
-                name = th.text.replace(code, "").strip()
-
-                market = tds[0].text.strip()
-                price = tds[2].text.strip()
-
-                diff = tds[4].text.strip()
-                diff_pct = tds[5].text.replace("%", "").strip()
-
-                trading_value = tds[6].text.replace(",", "").strip()
-
-                per = tds[7].text.strip().replace("倍", "")
-                pbr = tds[8].text.strip().replace("倍", "")
-                yield_ = tds[9].text.strip().replace("%", "")
-
-                writer.writerow([
-                    rank,
-                    code,
-                    name,
-                    market,
-                    price,
-                    diff,
-                    diff_pct,
-                    trading_value,
-                    per,
-                    pbr,
-                    yield_
-                ])
-
-                rank += 1
-
-                if rank > TOP_N:
-                    break
-
-            except Exception:
-                continue
-
-        if rank > TOP_N:
-            break
+            # ★ここで一旦停止（パースしない）
+            continue
 
 log("完了")
