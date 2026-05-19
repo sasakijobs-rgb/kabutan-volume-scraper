@@ -10,8 +10,8 @@ from datetime import datetime
 FOLDER = "output"
 os.makedirs(FOLDER, exist_ok=True)
 
-TOTAL_PAGES = 200
-TOP_N = 3000
+TOTAL_PAGES = 2
+TOP_N = 30
 
 BASE_URL = "https://kabutan.jp/warning/trading_value_ranking?market=0&capitalization=-1&stc=&stm=0&page="
 
