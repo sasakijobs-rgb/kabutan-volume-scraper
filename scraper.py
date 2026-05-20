@@ -23,7 +23,7 @@ print("URL:", URL)
 today = datetime.now().strftime("%Y%m%d")
 
 # ==========================================
-# CSV出力ファイル
+# CSV出力
 # ==========================================
 os.makedirs("output", exist_ok=True)
 csv_path = "output/first_page15_before.csv"
@@ -34,13 +34,11 @@ csv_path = "output/first_page15_before.csv"
 options = Options()
 
 options.add_argument("--headless=new")
-
 options.add_argument("--no-sandbox")
 options.add_argument("--disable-dev-shm-usage")
 options.add_argument("--disable-gpu")
 options.add_argument("--disable-setuid-sandbox")
 options.add_argument("--remote-debugging-port=9222")
-
 options.add_argument("--window-size=1400,2200")
 
 options.add_argument(
@@ -54,7 +52,7 @@ options.add_argument(
 options.binary_location = "/usr/bin/chromium-browser"
 
 # ==========================================
-# Chrome起動
+# 起動
 # ==========================================
 print("\n===== Chrome 起動 =====")
 driver = webdriver.Chrome(options=options)
@@ -63,9 +61,7 @@ try:
 
     driver.get(URL)
 
-    sleep_sec = random.uniform(5, 8)
-    print(f"sleep {sleep_sec:.2f} sec")
-    time.sleep(sleep_sec)
+    time.sleep(random.uniform(5, 8))
 
     print("\n===== TITLE =====")
     print(driver.title)
@@ -76,132 +72,111 @@ try:
     print(len(rows))
 
     if len(rows) == 0:
-        print("❌ row取得失敗")
+        print("❌ 取得失敗")
         driver.save_screenshot("debug.png")
         exit()
 
     # ==========================================
-    # 1件目
-    # ==========================================
-    rank = 1
-    row = rows[0]
-
-    print("\n===== RAW ROW =====")
-    print(row.text)
-
-    lines = row.text.split("\n")
-
-    print("\n===== SPLIT DEBUG =====")
-    for i, line in enumerate(lines):
-        print(i, line)
-
-    name = lines[0].strip()
-    code = lines[1].strip()
-    market = lines[2].strip()
-
-    price_prev = lines[3].strip()
-    remain = lines[4].strip()
-
-    # 株価 / 前日比
-    m = re.match(r"(.+?)\s+([+-].+)", price_prev)
-
-    if m:
-        price = m.group(1).strip()
-        prev_value = m.group(2).strip()
-    else:
-        price = price_prev
-        prev_value = ""
-
-    remain_parts = remain.split()
-
-    prev_rate = remain_parts[0] if len(remain_parts) > 0 else ""
-    trading_value = remain_parts[1] if len(remain_parts) > 1 else ""
-    per = remain_parts[2] if len(remain_parts) > 2 else ""
-    pbr = remain_parts[3] if len(remain_parts) > 3 else ""
-    yield_value = remain_parts[4] if len(remain_parts) > 4 else ""
-
-    # カンマ除去
-    price = price.replace(",", "")
-    prev_value = prev_value.replace(",", "")
-    trading_value = trading_value.replace(",", "")
-
-    # ==========================================
-    # 表示
-    # ==========================================
-    print("\n==============================")
-    print("📊 取得データチェック")
-    print("==============================")
-
-    print(f"0 日付        : {today}")
-    print(f"1 順位        : {rank}")
-    print(f"2 コード      : {code}")
-    print(f"3 銘柄名      : {name}")
-    print(f"4 市場        : {market}")
-    print(f"5 株価        : {price}")
-    print(f"6 前日比(値)  : {prev_value}")
-    print(f"7 前日比(率)  : {prev_rate}")
-    print(f"8 売買代金    : {trading_value}")
-    print(f"9 PER         : {per}")
-    print(f"10 PBR        : {pbr}")
-    print(f"11 利回り      : {yield_value}")
-
-    # ==========================================
-    # CSVレコード
-    # ==========================================
-    record = [
-        today,
-        rank,
-        code,
-        name,
-        market,
-        price,
-        prev_value,
-        prev_rate,
-        trading_value,
-        per,
-        pbr,
-        yield_value
-    ]
-
-    print("\n===== CSV RECORD =====")
-    print(record)
-
-    # ==========================================
-    # CSV出力（追加部分）
+    # CSV準備
     # ==========================================
     file_exists = os.path.exists(csv_path)
 
-    with open(csv_path, "a", newline="", encoding="utf-8-sig") as f:
-        writer = csv.writer(f, quoting=csv.QUOTE_MINIMAL)
+    with open(csv_path, "w", newline="", encoding="utf-8-sig") as f:
+        writer = csv.writer(f)
 
-        # ヘッダー（初回のみ）
-        if not file_exists:
+        # ヘッダー（修正済み）
+        writer.writerow([
+            "日付",
+            "順位",
+            "コード",
+            "銘柄名",
+            "市場",
+            "株価(百万円)",
+            "前日比(値)",
+            "前日比(率)",
+            "売買代金",
+            "PER",
+            "PBR",
+            "利回り"
+        ])
+
+        # ==========================================
+        # 1ページ分ループ
+        # ==========================================
+        for rank, row in enumerate(rows[:15], start=1):
+
+            lines = row.text.split("\n")
+
+            if len(lines) < 5:
+                continue
+
+            name = lines[0].strip()
+            code = lines[1].strip()
+            market = lines[2].strip()
+
+            price_prev = lines[3].strip()
+            remain = lines[4].strip()
+
+            # 株価と前日比
+            m = re.match(r"(.+?)\s+([+-].+)", price_prev)
+            if m:
+                price = m.group(1).strip()
+                prev_value = m.group(2).strip()
+            else:
+                price = price_prev
+                prev_value = ""
+
+            parts = remain.split()
+
+            prev_rate = parts[0] if len(parts) > 0 else ""
+            trading_value = parts[1] if len(parts) > 1 else ""
+            per = parts[2] if len(parts) > 2 else ""
+            pbr = parts[3] if len(parts) > 3 else ""
+            yield_value = parts[4] if len(parts) > 4 else ""
+
+            # カンマ除去
+            price = price.replace(",", "")
+            prev_value = prev_value.replace(",", "")
+            trading_value = trading_value.replace(",", "")
+
+            # ==========================================
+            # 表示
+            # ==========================================
+            print("\n==============================")
+            print(f"📊 {rank}件目")
+            print("==============================")
+            print("コード:", code)
+            print("銘柄名:", name)
+            print("市場:", market)
+            print("株価:", price)
+            print("前日比:", prev_value)
+            print("前日比率:", prev_rate)
+            print("売買代金:", trading_value)
+            print("PER:", per)
+            print("PBR:", pbr)
+            print("利回り:", yield_value)
+
+            # CSV書き込み
             writer.writerow([
-                "日付",
-                "順位",
-                "コード",
-                "銘柄名",
-                "市場",
-                "株価",
-                "前日比(値)",
-                "前日比(率)",
-                "売買代金",
-                "PER",
-                "PBR",
-                "利回り"
+                today,
+                rank,
+                code,
+                name,
+                market,
+                price,
+                prev_value,
+                prev_rate,
+                trading_value,
+                per,
+                pbr,
+                yield_value
             ])
 
-        writer.writerow(record)
-
-    # ==========================================
-    # screenshot
-    # ==========================================
     driver.save_screenshot("debug.png")
 
-    print("\n===== screenshot saved =====")
+    print("\n===== 完了 =====")
 
 except Exception as e:
-
     print("\n===== ERROR =====")
     print(type(e))
     print(e)
