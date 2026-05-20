@@ -40,6 +40,39 @@ header = [
 ]
 
 # ==========================================
+# ★追加：古い日次ファイル削除処理
+# ==========================================
+def cleanup_old_daily_files():
+    folder = "output"
+    prefix = "trading_value_ranking_"
+    suffix = ".csv"
+
+    files = []
+
+    for f in os.listdir(folder):
+        if f.startswith(prefix) and f.endswith(suffix):
+            # YYYYMMDD部分を抽出
+            date_str = f.replace(prefix, "").replace(suffix, "")
+            if date_str.isdigit():
+                files.append((date_str, f))
+
+    # 日付順（古い→新しい）
+    files.sort(key=lambda x: x[0])
+
+    MAX_FILES = 150
+
+    if len(files) > MAX_FILES:
+        to_delete = files[:len(files) - MAX_FILES]
+
+        for _, filename in to_delete:
+            path = os.path.join(folder, filename)
+            try:
+                os.remove(path)
+                print(f"🗑 削除: {filename}")
+            except Exception as e:
+                print(f"⚠ 削除失敗: {filename} ({e})")
+
+# ==========================================
 # merged 初回ヘッダー作成
 # ==========================================
 if not os.path.exists(merged_file):
@@ -63,6 +96,9 @@ driver = webdriver.Chrome(options=options)
 # ==========================================
 try:
     print("===== START =====")
+
+    # ★追加：古いファイル整理（150件制限）
+    cleanup_old_daily_files()
 
     # ==========================================
     # 1ページ目スナップショット
@@ -135,14 +171,12 @@ try:
 
                 tds = row.find_elements(By.TAG_NAME, "td")
 
-                # 列数不足は除外
                 if len(tds) < 8:
                     continue
 
                 try:
                     code = tds[0].text.strip()
 
-                    # コードが数字じゃない行は除外（UI対策）
                     if not code.isdigit():
                         continue
 
