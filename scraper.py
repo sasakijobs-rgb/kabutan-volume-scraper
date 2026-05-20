@@ -1,5 +1,4 @@
 import os
-import re
 import time
 import random
 import csv
@@ -16,49 +15,81 @@ BASE_URL = "https://s.kabutan.jp/warnings/trading_value_ranking/?market=all&page
 
 print("===== START =====")
 
-# ==========================================
-# 日付 & ファイル名
-# ==========================================
 today = datetime.now().strftime("%Y%m%d")
-filename = f"output/trading_value_ranking_{today}.csv"
 
 os.makedirs("output", exist_ok=True)
 
+output_csv = f"output/trading_value_ranking_{today}.csv"
+first_page_file = "output/first_page15_before.csv"
+
 # ==========================================
-# Chrome設定
+# Chrome
 # ==========================================
 options = Options()
-
 options.add_argument("--headless=new")
 options.add_argument("--no-sandbox")
 options.add_argument("--disable-dev-shm-usage")
 options.add_argument("--disable-gpu")
-options.add_argument("--disable-setuid-sandbox")
 options.add_argument("--remote-debugging-port=9222")
 options.add_argument("--window-size=1400,2200")
 
 options.add_argument(
-    "--user-agent=Mozilla/5.0 "
-    "(Windows NT 10.0; Win64; x64) "
-    "AppleWebKit/537.36 "
-    "(KHTML, like Gecko) "
-    "Chrome/124.0.0.0 Safari/537.36"
+    "--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+    "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
 )
 
 options.binary_location = "/usr/bin/chromium-browser"
 
-# ==========================================
-# 起動
-# ==========================================
-print("===== Chrome 起動 =====")
 driver = webdriver.Chrome(options=options)
 
 try:
 
     # ==========================================
-    # CSV初期化
+    # 1ページ目取得（比較用）
     # ==========================================
-    with open(filename, "w", newline="", encoding="utf-8-sig") as f:
+    print("\n===== PAGE 1 CHECK =====")
+    driver.get(BASE_URL.format(1))
+    time.sleep(random.uniform(5, 8))
+
+    rows = driver.find_elements(By.CSS_SELECTOR, "tbody tr")
+
+    current_page_snapshot = []
+    for r in rows[:15]:
+        txt = r.text.strip().replace("\n", " | ")
+        current_page_snapshot.append(txt)
+
+    current_snapshot_str = "\n".join(current_page_snapshot)
+
+    # ==========================================
+    # 前回データ読み込み
+    # ==========================================
+    if os.path.exists(first_page_file):
+        with open(first_page_file, "r", encoding="utf-8") as f:
+            prev_snapshot_str = f.read().strip()
+    else:
+        prev_snapshot_str = ""
+
+    # ==========================================
+    # 比較
+    # ==========================================
+    if current_snapshot_str == prev_snapshot_str:
+        print("\n⚠ 1ページ目が前回と完全一致 → 処理終了")
+        driver.quit()
+        exit()
+
+    print("\n✔ データ更新あり → 続行")
+
+    # ==========================================
+    # 新データ保存（生データ）
+    # ==========================================
+    with open(first_page_file, "w", encoding="utf-8") as f:
+        f.write(current_snapshot_str)
+
+    # ==========================================
+    # 本処理CSV
+    # ==========================================
+    with open(output_csv, "w", newline="", encoding="utf-8-sig") as f:
+
         writer = csv.writer(f)
 
         writer.writerow([
@@ -84,23 +115,16 @@ try:
         for page in range(1, 3):
 
             url = BASE_URL.format(page)
-
-            print("\n==============================")
-            print("PAGE:", page)
-            print(url)
+            print("\nPAGE:", page, url)
 
             driver.get(url)
-
             time.sleep(random.uniform(5, 8))
 
             rows = driver.find_elements(By.CSS_SELECTOR, "tbody tr")
 
-            print("ROW:", len(rows))
-
             for row in rows:
 
                 lines = row.text.split("\n")
-
                 if len(lines) < 5:
                     continue
 
@@ -111,12 +135,13 @@ try:
                 price_prev = lines[3].strip()
                 remain = lines[4].strip()
 
-                # 株価 + 前日比
+                # 株価分離
+                import re
                 m = re.match(r"(.+?)\s+([+-].+)", price_prev)
 
                 if m:
-                    price = m.group(1).strip()
-                    prev_value = m.group(2).strip()
+                    price = m.group(1)
+                    prev_value = m.group(2)
                 else:
                     price = price_prev
                     prev_value = ""
@@ -134,7 +159,6 @@ try:
                 prev_value = prev_value.replace(",", "")
                 trading_value = trading_value.replace(",", "")
 
-                # CSV書き込み
                 writer.writerow([
                     today,
                     rank,
@@ -150,12 +174,8 @@ try:
                     yield_value
                 ])
 
-                # 表示
-                print(f"[{rank}] {code} {name}")
-
                 rank += 1
 
-                # 30件制限
                 if rank > 30:
                     break
 
@@ -165,12 +185,7 @@ try:
     driver.save_screenshot("debug.png")
 
     print("\n===== 完了 =====")
-    print("OUTPUT:", filename)
-
-except Exception as e:
-    print("\n===== ERROR =====")
-    print(type(e))
-    print(e)
+    print("CSV:", output_csv)
 
 finally:
     driver.quit()
