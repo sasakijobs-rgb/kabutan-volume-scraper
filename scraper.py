@@ -11,7 +11,12 @@ from selenium.webdriver.chrome.options import Options
 # ==========================================
 # 設定
 # ==========================================
-BASE_URL = "https://kabutan.jp/warning/trading_value_ranking?market=0&capitalization=-1&dispmode=normal&stc=&stm=0&page={}"
+BASE_URL = (
+    "https://kabutan.jp/warning/"
+    "trading_value_ranking?"
+    "market=0&capitalization=-1"
+    "&dispmode=normal&stc=&stm=0&page={}"
+)
 
 MAX_PAGES = 300
 
@@ -22,6 +27,9 @@ os.makedirs("output", exist_ok=True)
 merged_file = "output/trading_value_ranking_merged.csv"
 daily_file = f"output/trading_value_ranking_{today}.csv"
 
+# ==========================================
+# CSVヘッダー
+# ==========================================
 header = [
     "日付",
     "順位",
@@ -41,7 +49,14 @@ header = [
 # merged 初回作成
 # ==========================================
 if not os.path.exists(merged_file):
-    with open(merged_file, "w", newline="", encoding="utf-8-sig") as f:
+
+    with open(
+        merged_file,
+        "w",
+        newline="",
+        encoding="utf-8-sig"
+    ) as f:
+
         writer = csv.writer(f)
         writer.writerow(header)
 
@@ -51,6 +66,7 @@ if not os.path.exists(merged_file):
 def cleanup_old_daily_files():
 
     folder = "output"
+
     prefix = "trading_value_ranking_"
     suffix = ".csv"
 
@@ -68,7 +84,10 @@ def cleanup_old_daily_files():
         if "merged" in f:
             continue
 
-        date_str = f.replace(prefix, "").replace(suffix, "")
+        date_str = (
+            f.replace(prefix, "")
+             .replace(suffix, "")
+        )
 
         if not date_str.isdigit():
             continue
@@ -104,6 +123,7 @@ options.add_argument("--headless=new")
 options.add_argument("--no-sandbox")
 options.add_argument("--disable-dev-shm-usage")
 options.add_argument("--disable-gpu")
+
 options.add_argument("--window-size=1400,2200")
 
 options.add_argument(
@@ -126,10 +146,19 @@ try:
     cleanup_old_daily_files()
 
     # ==========================================
-    # CSV作成
+    # CSV準備
     # ==========================================
-    with open(daily_file, "w", newline="", encoding="utf-8-sig") as df, \
-         open(merged_file, "a", newline="", encoding="utf-8-sig") as mf:
+    with open(
+        daily_file,
+        "w",
+        newline="",
+        encoding="utf-8-sig"
+    ) as df, open(
+        merged_file,
+        "a",
+        newline="",
+        encoding="utf-8-sig"
+    ) as mf:
 
         daily_writer = csv.writer(df)
         merged_writer = csv.writer(mf)
@@ -141,29 +170,38 @@ try:
         empty_count = 0
 
         # ==========================================
-        # ページ取得
+        # ページループ
         # ==========================================
         for page in range(1, MAX_PAGES + 1):
 
             url = BASE_URL.format(page)
 
-            print("\nPAGE:", page)
+            print("\n===================================")
+            print("PAGE:", page)
             print(url)
 
             driver.get(url)
 
             time.sleep(random.uniform(2, 4))
 
-            rows = driver.find_elements(By.CSS_SELECTOR, "tbody tr")
+            rows = driver.find_elements(
+                By.CSS_SELECTOR,
+                "tbody tr"
+            )
 
             print("rows:", len(rows))
 
+            # ==========================================
             # 空ページ検知
+            # ==========================================
             if len(rows) == 0:
 
                 empty_count += 1
 
-                print(f"⚠ empty page ({empty_count})")
+                print(
+                    f"⚠ empty page "
+                    f"({empty_count})"
+                )
 
                 if empty_count >= 3:
                     print("⚠ 3連続空ページ → 終了")
@@ -188,24 +226,41 @@ try:
                         "td, th"
                     )
 
-                    # デバッグ
-                    print("cells:", len(cells))
-
-                    if len(cells) < 8:
-                        continue
-
                     values = []
 
                     for c in cells:
+
+                        cls = (
+                            c.get_attribute("class") or ""
+                        )
+
+                        # ==================================
+                        # 不要列除外
+                        # ==================================
+                        if "gaiyou_icon" in cls:
+                            continue
+
+                        if "chart_icon" in cls:
+                            continue
+
                         txt = c.text.strip()
+
                         values.append(txt)
 
-                    # デバッグ
+                    # ======================================
+                    # 正常列数チェック
+                    # ======================================
+                    if len(values) != 10:
+                        continue
+
                     print(values)
 
+                    # ======================================
+                    # データ取得
+                    # ======================================
                     code = values[0]
 
-                    # 数字コード以外除外
+                    # 数字コードのみ
                     if not code.isdigit():
                         continue
 
@@ -217,15 +272,26 @@ try:
                     prev_rate = values[5]
                     trading_value = values[6]
 
-                    per = values[7] if len(values) > 7 else ""
-                    pbr = values[8] if len(values) > 8 else ""
-                    yield_value = values[9] if len(values) > 9 else ""
+                    per = values[7]
+                    pbr = values[8]
+                    yield_value = values[9]
 
+                    # ======================================
                     # カンマ除去
+                    # ======================================
                     price = price.replace(",", "")
-                    prev_value = prev_value.replace(",", "")
-                    trading_value = trading_value.replace(",", "")
 
+                    prev_value = (
+                        prev_value.replace(",", "")
+                    )
+
+                    trading_value = (
+                        trading_value.replace(",", "")
+                    )
+
+                    # ======================================
+                    # CSV行
+                    # ======================================
                     row_data = [
                         today,
                         rank,
@@ -246,7 +312,12 @@ try:
 
                     page_valid_count += 1
 
-                    print("✔", rank, code, name)
+                    print(
+                        "✔",
+                        rank,
+                        code,
+                        name
+                    )
 
                     rank += 1
 
@@ -255,15 +326,23 @@ try:
                     print("⚠ row error:", e)
 
                     try:
-                        print(row.get_attribute("innerHTML"))
+                        print(
+                            row.get_attribute(
+                                "innerHTML"
+                            )
+                        )
                     except:
                         pass
 
                     continue
 
-            print("valid rows:", page_valid_count)
+            print(
+                "valid rows:",
+                page_valid_count
+            )
 
     print("\n===== 完了 =====")
+
     print("daily :", daily_file)
     print("merged:", merged_file)
 
