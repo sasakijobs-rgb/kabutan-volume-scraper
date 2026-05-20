@@ -38,16 +38,18 @@ header = [
 ]
 
 # ==========================================
-# merged 初回ヘッダー作成
+# merged 初回作成
 # ==========================================
 if not os.path.exists(merged_file):
     with open(merged_file, "w", newline="", encoding="utf-8-sig") as f:
-        csv.writer(f).writerow(header)
+        writer = csv.writer(f)
+        writer.writerow(header)
 
 # ==========================================
-# 古いファイル削除（150制限）
+# 古い日次CSV削除（150件保持）
 # ==========================================
 def cleanup_old_daily_files():
+
     folder = "output"
     prefix = "trading_value_ranking_"
     suffix = ".csv"
@@ -55,32 +57,62 @@ def cleanup_old_daily_files():
     files = []
 
     for f in os.listdir(folder):
-        if f.startswith(prefix) and f.endswith(suffix):
-            date_str = f.replace(prefix, "").replace(suffix, "")
-            if date_str.isdigit():
-                files.append((date_str, f))
 
+        if not f.startswith(prefix):
+            continue
+
+        if not f.endswith(suffix):
+            continue
+
+        # merged除外
+        if "merged" in f:
+            continue
+
+        date_str = f.replace(prefix, "").replace(suffix, "")
+
+        if not date_str.isdigit():
+            continue
+
+        files.append((date_str, f))
+
+    # 古い順
     files.sort(key=lambda x: x[0])
 
     MAX_FILES = 150
 
     if len(files) > MAX_FILES:
-        for _, filename in files[:len(files) - MAX_FILES]:
+
+        delete_targets = files[:len(files) - MAX_FILES]
+
+        for _, filename in delete_targets:
+
+            path = os.path.join(folder, filename)
+
             try:
-                os.remove(os.path.join(folder, filename))
-                print(f"🗑 削除: {filename}")
+                os.remove(path)
+                print("🗑 削除:", filename)
+
             except Exception as e:
-                print(f"⚠ 削除失敗: {filename} ({e})")
+                print("⚠ 削除失敗:", filename, e)
 
 # ==========================================
 # Chrome
 # ==========================================
 options = Options()
+
 options.add_argument("--headless=new")
 options.add_argument("--no-sandbox")
 options.add_argument("--disable-dev-shm-usage")
 options.add_argument("--disable-gpu")
 options.add_argument("--window-size=1400,2200")
+
+options.add_argument(
+    "--user-agent=Mozilla/5.0 "
+    "(Windows NT 10.0; Win64; x64) "
+    "AppleWebKit/537.36 "
+    "(KHTML, like Gecko) "
+    "Chrome/124.0.0.0 Safari/537.36"
+)
 
 driver = webdriver.Chrome(options=options)
 
@@ -88,69 +120,108 @@ driver = webdriver.Chrome(options=options)
 # メイン
 # ==========================================
 try:
+
     print("===== START =====")
 
     cleanup_old_daily_files()
 
+    # ==========================================
+    # CSV作成
+    # ==========================================
     with open(daily_file, "w", newline="", encoding="utf-8-sig") as df, \
          open(merged_file, "a", newline="", encoding="utf-8-sig") as mf:
 
         daily_writer = csv.writer(df)
         merged_writer = csv.writer(mf)
 
+        # dailyのみ見出し
         daily_writer.writerow(header)
 
         rank = 1
         empty_count = 0
 
         # ==========================================
-        # ページループ（毎回実行）
+        # ページ取得
         # ==========================================
         for page in range(1, MAX_PAGES + 1):
 
             url = BASE_URL.format(page)
-            print("PAGE:", page, url)
+
+            print("\nPAGE:", page)
+            print(url)
 
             driver.get(url)
+
             time.sleep(random.uniform(2, 4))
 
             rows = driver.find_elements(By.CSS_SELECTOR, "tbody tr")
 
+            print("rows:", len(rows))
+
+            # 空ページ検知
             if len(rows) == 0:
+
                 empty_count += 1
-                print(f"⚠ empty page {page} ({empty_count})")
+
+                print(f"⚠ empty page ({empty_count})")
 
                 if empty_count >= 3:
-                    print("⚠ 連続空ページ → 終了")
+                    print("⚠ 3連続空ページ → 終了")
                     break
+
                 continue
 
             empty_count = 0
 
+            page_valid_count = 0
+
+            # ==========================================
+            # 行解析
+            # ==========================================
             for row in rows:
 
-                tds = row.find_elements(By.TAG_NAME, "td")
-
-                if len(tds) < 8:
-                    continue
-
                 try:
-                    code = tds[0].text.strip()
 
+                    # td + th 両対応
+                    cells = row.find_elements(
+                        By.CSS_SELECTOR,
+                        "td, th"
+                    )
+
+                    # デバッグ
+                    print("cells:", len(cells))
+
+                    if len(cells) < 8:
+                        continue
+
+                    values = []
+
+                    for c in cells:
+                        txt = c.text.strip()
+                        values.append(txt)
+
+                    # デバッグ
+                    print(values)
+
+                    code = values[0]
+
+                    # 数字コード以外除外
                     if not code.isdigit():
                         continue
 
-                    name = tds[1].text.strip()
-                    market = tds[2].text.strip()
+                    name = values[1]
+                    market = values[2]
 
-                    price = tds[3].text.strip()
-                    prev_value = tds[4].text.strip()
-                    prev_rate = tds[5].text.strip()
-                    trading_value = tds[6].text.strip()
-                    per = tds[7].text.strip() if len(tds) > 7 else ""
-                    pbr = tds[8].text.strip() if len(tds) > 8 else ""
-                    yield_value = tds[9].text.strip() if len(tds) > 9 else ""
+                    price = values[3]
+                    prev_value = values[4]
+                    prev_rate = values[5]
+                    trading_value = values[6]
 
+                    per = values[7] if len(values) > 7 else ""
+                    pbr = values[8] if len(values) > 8 else ""
+                    yield_value = values[9] if len(values) > 9 else ""
+
+                    # カンマ除去
                     price = price.replace(",", "")
                     prev_value = prev_value.replace(",", "")
                     trading_value = trading_value.replace(",", "")
@@ -173,15 +244,31 @@ try:
                     daily_writer.writerow(row_data)
                     merged_writer.writerow(row_data)
 
+                    page_valid_count += 1
+
+                    print("✔", rank, code, name)
+
                     rank += 1
 
                 except Exception as e:
+
                     print("⚠ row error:", e)
 
-    print("===== 完了 =====")
-    print("daily:", daily_file)
+                    try:
+                        print(row.get_attribute("innerHTML"))
+                    except:
+                        pass
+
+                    continue
+
+            print("valid rows:", page_valid_count)
+
+    print("\n===== 完了 =====")
+    print("daily :", daily_file)
     print("merged:", merged_file)
 
 finally:
+
     driver.quit()
+
     print("===== END =====")
