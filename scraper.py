@@ -1,114 +1,172 @@
-import requests
-from bs4 import BeautifulSoup
+import time
+import random
+
+from selenium import webdriver
+from selenium.webdriver.common.by import By
+from selenium.webdriver.chrome.options import Options
+from selenium.webdriver.chrome.service import Service
+from webdriver_manager.chrome import ChromeDriverManager
 
 # =========================
 # URL
 # =========================
-url = "https://kabutan.jp/warning/trading_value_ranking?market=0&capitalization=-1&dispmode=normal&stc=&stm=0&page=1"
+url = "https://s.kabutan.jp/warnings/trading_value_ranking?market=all&page=1"
 
-print("===== START =====")
+print("\n===== START =====")
 print("URL:", url)
 
 # =========================
-# ヘッダー（最低限のブラウザ偽装）
+# Chrome設定（安定ルート）
 # =========================
-headers = {
-    "User-Agent": (
-        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
-        "AppleWebKit/537.36 (KHTML, like Gecko) "
-        "Chrome/120.0.0.0 Safari/537.36"
-    ),
-    "Accept-Language": "ja,en-US;q=0.9,en;q=0.8",
-}
+options = Options()
 
-# =========================
-# リクエスト
-# =========================
-print("===== REQUEST =====")
+# headlessは外す（デバッグ優先）
+# options.add_argument("--headless")
 
-res = requests.get(url, headers=headers, timeout=15)
+options.add_argument("--no-sandbox")
+options.add_argument("--disable-dev-shm-usage")
 
-print("STATUS:", res.status_code)
-print("FINAL URL:", res.url)
-print("HTML SIZE:", len(res.text))
+options.add_argument("--disable-blink-features=AutomationControlled")
 
-html = res.text
+options.add_argument(
+    "--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+    "AppleWebKit/537.36 (KHTML, like Gecko) "
+    "Chrome/124.0.0.0 Safari/537.36"
+)
 
-# =========================
-# WAFチェック
-# =========================
-if "Human Verification" in html or "captcha" in html.lower():
-    print("\n❌ WAF検知されました（HTML取得できていません）")
-    print(html[:1000])
-    exit()
+options.add_experimental_option("excludeSwitches", ["enable-automation"])
+options.add_experimental_option("useAutomationExtension", False)
 
-# =========================
-# パース
-# =========================
-soup = BeautifulSoup(html, "html.parser")
+print("\n===== Chrome 起動 =====")
 
-table = soup.select_one("table.stock_table.st_market")
+driver = webdriver.Chrome(
+    service=Service(ChromeDriverManager().install()),
+    options=options
+)
 
-print("\n===== TABLE CHECK =====")
-print("table exists:", table is not None)
+# webdriver検出回避（軽い対策）
+driver.execute_script("""
+Object.defineProperty(navigator, 'webdriver', {
+    get: () => undefined
+})
+""")
 
-if not table:
-    print("❌ テーブルが取得できません（構造 or WAF）")
-    exit()
+print("===== Chrome 起動完了 =====")
 
-rows = table.select("tbody tr")
-
-print("row count:", len(rows))
-
-if len(rows) == 0:
-    print("❌ 行が取得できません")
-    exit()
-
-# =========================
-# 1件取得テスト
-# =========================
-row = rows[0]
-
-print("\n===== RAW ROW TEXT =====")
-print(row.get_text(" ", strip=True))
-
-tds = row.find_all("td")
-ths = row.find_all("th")
-
-print("\n===== DEBUG =====")
-print("td count:", len(tds))
-print("th count:", len(ths))
-
-# =========================
-# 項目抽出（構造確認用）
-# =========================
 try:
-    code = tds[0].text.strip()
-    name = ths[0].text.strip()
-    market = tds[1].text.strip()
+    # =========================
+    # アクセス
+    # =========================
+    print("\n===== ACCESS =====")
+    driver.get(url)
 
-    price = tds[4].text.strip()
-    change = tds[6].text.strip()
-    change_pct = tds[7].text.strip()
-    value = tds[8].text.strip()
-    per = tds[9].text.strip()
-    pbr = tds[10].text.strip()
-    yield_ = tds[11].text.strip()
+    sleep_sec = random.uniform(6, 10)
+    print(f"sleep: {sleep_sec:.2f} sec")
+    time.sleep(sleep_sec)
 
-    print("\n===== RESULT (1件) =====")
-    print("コード:", code)
-    print("銘柄名:", name)
-    print("市場:", market)
-    print("株価:", price)
-    print("前日比:", change)
-    print("前日比%:", change_pct)
-    print("売買代金:", value)
-    print("PER:", per)
-    print("PBR:", pbr)
-    print("利回り:", yield_)
+    # =========================
+    # ページ情報
+    # =========================
+    print("\n===== PAGE INFO =====")
+    print("TITLE:", driver.title)
+    print("URL:", driver.current_url)
 
-except Exception as e:
-    print("\n❌ パースエラー")
-    print(e)
+    # =========================
+    # WAFチェック
+    # =========================
+    html = driver.page_source
+    print("\n===== HTML SIZE =====")
+    print(len(html))
 
-print("\n===== END =====")
+    if "Human Verification" in html or "AWS WAF" in html:
+        print("\n❌ WAF検知")
+        print(html[:500])
+        driver.save_screenshot("waf_error.png")
+        driver.quit()
+        exit()
+
+    # =========================
+    # ROW取得
+    # =========================
+    rows = driver.find_elements(By.CSS_SELECTOR, "tbody tr")
+
+    print("\n===== ROW COUNT =====")
+    print(len(rows))
+
+    if len(rows) == 0:
+        print("❌ データなし")
+        driver.save_screenshot("no_rows.png")
+        driver.quit()
+        exit()
+
+    # =========================
+    # 1行取得
+    # =========================
+    row = rows[0]
+
+    print("\n===== FIRST ROW RAW TEXT =====")
+    print(row.text)
+
+    ths = row.find_elements(By.TAG_NAME, "th")
+    tds = row.find_elements(By.TAG_NAME, "td")
+
+    print("\n===== TH COUNT =====", len(ths))
+    print("===== TD COUNT =====", len(tds))
+
+    # =========================
+    # 🔥 銘柄情報（改行対応）
+    # =========================
+    print("\n===== STOCK INFO PARSE =====")
+
+    if ths:
+        raw_text = ths[0].text.strip()
+        print("RAW TH TEXT:")
+        print(raw_text)
+
+        raw_parts = raw_text.split("\n")
+
+        code = raw_parts[0] if len(raw_parts) > 0 else ""
+        market = raw_parts[1] if len(raw_parts) > 1 else ""
+
+        name_elem = ths[0].find_elements(By.TAG_NAME, "a")
+        name = name_elem[0].text.strip() if name_elem else ""
+
+        print("\n--- parsed ---")
+        print("code   :", code)
+        print("market :", market)
+        print("name   :", name)
+
+    else:
+        print("❌ thなし")
+
+    # =========================
+    # 株価系データ（安全取得）
+    # =========================
+    print("\n===== PRICE INFO =====")
+
+    def safe_td(i):
+        return tds[i].text.strip() if len(tds) > i else ""
+
+    price = safe_td(0)
+    prev = safe_td(1)
+    volume = safe_td(2)
+    per = safe_td(4)
+    pbr = safe_td(5)
+    yield_ = safe_td(6)
+
+    print("price :", price)
+    print("prev  :", prev)
+    print("volume:", volume)
+    print("per   :", per)
+    print("pbr   :", pbr)
+    print("yield :", yield_)
+
+    # =========================
+    # スクショ
+    # =========================
+    driver.save_screenshot("debug.png")
+    print("\n===== screenshot saved =====")
+
+finally:
+    driver.quit()
+    print("\n===== END =====")
