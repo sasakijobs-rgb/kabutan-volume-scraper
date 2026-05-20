@@ -7,25 +7,67 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.chrome.options import Options
 
 
-URL = "https://s.kabutan.jp/warnings/trading_value_ranking/?market=all&page=208"
-OUTPUT_FILE = f"output/page208_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv"
+URL_TEMPLATE = "https://s.kabutan.jp/warnings/trading_value_ranking/?market=all&page={}"
+
+OUTPUT_FILE = "trading_value_ranking_20260520.csv"
 
 
-def is_valid_row(text):
-    if not text:
-        return False
-    if len(text) < 10:
-        return False
-    if "表示モード" in text:
-        return False
-    if "銘柄" in text:
-        return False
-    return True
+# =========================
+# クリーン
+# =========================
+def clean(text):
+    return text.replace("\n", " ").replace("\t", " ").strip()
 
 
+# =========================
+# 行判定（銘柄コード4桁）
+# =========================
+def is_data_row(cells):
+    for c in cells:
+        if c.isdigit() and len(c) == 4:
+            return True
+    return False
+
+
+# =========================
+# ページ取得
+# =========================
+def fetch_page(driver, page):
+    url = URL_TEMPLATE.format(page)
+    print(f"\n[PAGE] {page} / {url}")
+
+    driver.get(url)
+    time.sleep(2)
+
+    rows = driver.find_elements(By.TAG_NAME, "tr")
+
+    print(f"[INFO] rows detected: {len(rows)}")
+
+    result = []
+
+    for r in rows:
+        ths = r.find_elements(By.TAG_NAME, "th")
+        tds = r.find_elements(By.TAG_NAME, "td")
+
+        cells = [clean(x.text) for x in ths + tds if x.text.strip()]
+
+        if len(cells) < 6:
+            continue
+
+        if not is_data_row(cells):
+            continue
+
+        result.append(cells)
+
+    return result
+
+
+# =========================
+# メイン
+# =========================
 def run():
+
     print("===== START =====")
-    print(f"URL: {URL}")
 
     options = Options()
     options.add_argument("--headless=new")
@@ -34,37 +76,55 @@ def run():
 
     driver = webdriver.Chrome(options=options)
 
-    driver.get(URL)
-    time.sleep(3)
+    pages = [1, 208]
 
-    rows = driver.find_elements(By.TAG_NAME, "tr")
+    all_data = []
 
-    print(f"[INFO] rows detected: {len(rows)}")
+    for page in pages:
+        data = fetch_page(driver, page)
 
-    data = []
+        print(f"[RESULT] page {page} rows: {len(data)}")
 
-    for r in rows:
-        txt = r.text.strip()
-
-        print("\n===== RAW ROW =====")
-        print(txt)
-
-        if is_valid_row(txt):
-            data.append(txt)
+        for row in data:
+            all_data.append([page] + row)
 
     driver.quit()
 
+    # =========================
     # CSV出力
+    # =========================
+    header = [
+        "日付",
+        "No",
+        "コード",
+        "銘柄名",
+        "市場",
+        "株価(百万円)",
+        "前日比",
+        "前日比(%)",
+        "売買代金",
+        "PER",
+        "PBR",
+        "利回り"
+    ]
+
     with open(OUTPUT_FILE, "w", newline="", encoding="utf-8") as f:
         writer = csv.writer(f)
-        writer.writerow(["page", "raw_data"])
 
-        for row in data:
-            writer.writerow([208, row])
+        writer.writerow(header)
+
+        for row in all_data:
+            # 安全に長さ補正
+            page = row[0]
+            data = row[1:]
+
+            data = data[:11] + [""] * (11 - len(data))
+
+            writer.writerow([page] + data)
 
     print("\n===== DONE =====")
-    print(f"saved rows: {len(data)}")
     print(f"file: {OUTPUT_FILE}")
+    print(f"total rows: {len(all_data)}")
     print("===== END =====")
 
 
