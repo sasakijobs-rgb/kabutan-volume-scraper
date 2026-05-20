@@ -1,88 +1,76 @@
 import re
 import csv
 import time
-import requests
-from bs4 import BeautifulSoup
+from selenium import webdriver
+from selenium.webdriver.common.by import By
 
-BASE_URL = "https://s.kabutan.jp/warnings/trading_value_ranking/"
 DATE = "20260520"
+BASE_URL = "https://s.kabutan.jp/warnings/trading_value_ranking/?market=all&page="
 OUTPUT_FILE = f"trading_value_ranking_{DATE}.csv"
 
 
 # =========================
-# 件数から最終ページ計算
+# 件数 → 最終ページ
 # =========================
-def calc_last_page(total_items, per_page=20):
-    return (total_items + per_page - 1) // per_page
+def calc_last_page(total):
+    return (total + 19) // 20
 
 
 # =========================
-# 件数取得（ページ1から）
+# 件数取得
 # =========================
-def get_total_count():
-    url = BASE_URL + "?market=all&page=1"
-    r = requests.get(url, timeout=10)
-    soup = BeautifulSoup(r.text, "html.parser")
+def get_total(driver):
+    driver.get(BASE_URL + "1")
+    time.sleep(2)
 
-    text = soup.get_text()
-
-    # 例: "4143件 / 4143件中"
+    text = driver.page_source
     m = re.search(r"([\d,]+)件\s*/\s*([\d,]+)件中", text)
+
     if not m:
-        raise Exception("件数が取得できませんでした")
+        raise Exception("件数が取得できません")
 
-    total = int(m.group(2).replace(",", ""))
-    return total
+    return int(m.group(2).replace(",", ""))
 
 
 # =========================
-# 通常ページ（1ページ目）
+# 通常ページ
 # =========================
-def parse_page1():
-    url = BASE_URL + "?market=all&page=1"
-    r = requests.get(url, timeout=10)
-    soup = BeautifulSoup(r.text, "html.parser")
+def parse_normal(driver, page):
+    url = BASE_URL + str(page)
+    driver.get(url)
+    time.sleep(2)
 
     rows = []
 
-    table = soup.select("table tbody tr")
-    no = 1
+    trs = driver.find_elements(By.CSS_SELECTOR, "tbody tr")
 
-    for tr in table:
-        tds = tr.find_all(["td", "th"])
+    no = (page - 1) * 20 + 1
+
+    for tr in trs:
+        tds = tr.find_elements(By.TAG_NAME, "td")
         if len(tds) < 8:
             continue
 
         try:
-            name_block = tds[0].get_text(" ", strip=True)
-            parts = name_block.split()
+            head = tr.find_element(By.TAG_NAME, "th").text
+            parts = head.split()
 
             name = parts[0]
             code = parts[1]
             market = parts[2]
 
-            price = tds[1].get_text(strip=True)
-            change = tds[2].get_text(" ", strip=True).split()[0]
-            change_pct = tds[2].get_text(" ", strip=True).split()[1]
-
-            volume = tds[3].get_text(strip=True)
-            per = tds[5].get_text(strip=True)
-            pbr = tds[6].get_text(strip=True)
-            yield_ = tds[7].get_text(strip=True)
+            price = tds[0].text
+            change = tds[1].text.split("\n")[0]
+            change_pct = tds[1].text.split("\n")[1]
+            volume = tds[2].text
+            per = tds[3].text
+            pbr = tds[4].text
+            yield_ = tds[5].text
 
             rows.append([
-                DATE,
-                no,
-                code,
-                name,
-                market,
-                price,
-                change,
-                change_pct,
-                volume,
-                per,
-                pbr,
-                yield_
+                DATE, no, code, name, market,
+                price, change, change_pct,
+                volume, per, pbr, yield_
             ])
             no += 1
 
@@ -93,25 +81,27 @@ def parse_page1():
 
 
 # =========================
-# 最終ページ（崩れHTML対応）
+# 最終ページ（崩れ対応）
 # =========================
-def parse_last_page(page):
-    url = BASE_URL + f"?market=all&page={page}"
-    r = requests.get(url, timeout=10)
+def parse_last(driver, page):
+    url = BASE_URL + str(page)
+    driver.get(url)
+    time.sleep(2)
 
-    soup = BeautifulSoup(r.text, "html.parser")
-    text = soup.get_text("\n", strip=True)
+    html = driver.page_source
+    text = re.sub(r"<br\s*/?>", "\n", html)
+    text = re.sub(r"<.*?>", "", text)
 
-    rows = []
-    no = 4141  # 必要なら調整（後で連番でもOK）
-
-    # 1行単位で粗抽出
     lines = text.split("\n")
 
+    rows = []
+    no = (page - 1) * 20 + 1
+
     for line in lines:
-        # 例:
-        # ウチヤマＨＤ 6059 東S 342 -2 -0.58% 1 22.7倍 0.46倍 2.92%
-        if not re.search(r"\d{4}\s", line):
+        line = line.strip()
+
+        # 銘柄行っぽいものだけ拾う
+        if not re.search(r"\d{4}\s東|名|札|福", line):
             continue
 
         parts = line.split()
@@ -132,18 +122,9 @@ def parse_last_page(page):
             yield_ = parts[9] if len(parts) > 9 else "-"
 
             rows.append([
-                DATE,
-                no,
-                code,
-                name,
-                market,
-                price,
-                change,
-                change_pct,
-                volume,
-                per,
-                pbr,
-                yield_
+                DATE, no, code, name, market,
+                price, change, change_pct,
+                volume, per, pbr, yield_
             ])
             no += 1
 
@@ -156,7 +137,7 @@ def parse_last_page(page):
 # =========================
 # CSV出力
 # =========================
-def save_csv(rows):
+def save(rows):
     header = [
         "日付","No","コード","銘柄名","市場",
         "株価(百万円)","前日比","前日比(%)",
@@ -175,28 +156,30 @@ def save_csv(rows):
 def main():
     print("===== START =====")
 
-    total = get_total_count()
-    last_page = calc_last_page(total, 20)
+    driver = webdriver.Chrome()
 
-    print(f"[INFO] total items: {total}")
-    print(f"[INFO] last page: {last_page}")
+    total = get_total(driver)
+    last_page = calc_last_page(total)
+
+    print(f"[INFO] total: {total}")
+    print(f"[INFO] last_page: {last_page}")
 
     all_rows = []
 
     # 1ページ目
-    print("[PAGE] 1")
-    rows1 = parse_page1()
-    all_rows.extend(rows1)
+    print("[PAGE 1]")
+    all_rows += parse_normal(driver, 1)
 
     # 最終ページ
-    print(f"[PAGE] {last_page}")
-    rows_last = parse_last_page(last_page)
-    all_rows.extend(rows_last)
+    print(f"[PAGE {last_page}]")
+    all_rows += parse_last(driver, last_page)
 
-    save_csv(all_rows)
+    save(all_rows)
+
+    driver.quit()
 
     print("===== DONE =====")
-    print(f"output: {OUTPUT_FILE}")
+    print(f"file: {OUTPUT_FILE}")
 
 
 if __name__ == "__main__":
