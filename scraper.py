@@ -1,141 +1,120 @@
+import os
 import time
-import re
+import random
 import csv
+import re
 from datetime import datetime
 
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.chrome.options import Options
 
-# ==========================================
-# 設定
-# ==========================================
-URL = "https://s.kabutan.jp/warnings/trading_value_ranking/?market=all&page=208"
+BASE_URL = "https://s.kabutan.jp/warnings/trading_value_ranking/?market=all&page={}"
+MAX_PAGES = 300
 
 today = datetime.now().strftime("%Y%m%d")
-output_file = f"output/trading_value_page208_{today}.csv"
+
+os.makedirs("output", exist_ok=True)
+
+output_file = f"output/trading_value_ranking_{today}.csv"
 
 header = [
-    "日付",
-    "コード",
-    "銘柄名",
-    "市場",
-    "株価",
-    "前日比",
-    "前日比率",
-    "売買代金",
-    "PER",
-    "PBR",
-    "利回り"
+    "日付","順位","コード","銘柄名","市場",
+    "株価","前日比(値)","前日比(率)",
+    "売買代金","PER","PBR","利回り"
 ]
 
-# ==========================================
-# 判定関数（最重要）
-# ==========================================
-def is_stock_row(th_text: str) -> bool:
-    """
-    thのテキストから「銘柄行かどうか」を判定
-    """
-    lines = [x.strip() for x in th_text.split("\n") if x.strip()]
-
-    if len(lines) < 2:
-        return False
-
-    code = lines[-1]  # 最後がコード
-
-    return re.fullmatch(r"[0-9A-Z]{4,5}", code) is not None
-
-
-# ==========================================
-# Chrome設定
-# ==========================================
 options = Options()
 options.add_argument("--headless=new")
-options.add_argument("--no-sandbox")
-options.add_argument("--disable-dev-shm-usage")
-options.add_argument("--window-size=1400,2200")
 
 driver = webdriver.Chrome(options=options)
 
-try:
+print("===== START =====")
 
-    print("===== START =====")
-    print("URL:", URL)
+saved_total = 0
+rank = 1
+empty_page_count = 0
 
-    driver.get(URL)
+with open(output_file, "w", newline="", encoding="utf-8-sig") as f:
+    writer = csv.writer(f)
+    writer.writerow(header)
 
-    time.sleep(5)
+    for page in range(1, MAX_PAGES + 1):
 
-    rows = driver.find_elements(By.CSS_SELECTOR, "tbody tr")
+        url = BASE_URL.format(page)
 
-    print("rows:", len(rows))
+        print(f"\n[PAGE] {page} / URL: {url}")
 
-    results = []
+        driver.get(url)
+        time.sleep(random.uniform(2, 4))
 
-    # ==========================================
-    # 解析ループ
-    # ==========================================
-    for row in rows:
+        rows = driver.find_elements(By.CSS_SELECTOR, "tbody tr")
 
-        try:
-            th = row.find_element(By.CSS_SELECTOR, "th")
-            tds = row.find_elements(By.CSS_SELECTOR, "td")
+        print(f"[INFO] rows detected: {len(rows)}")
 
-            th_text = th.text.strip()
+        if len(rows) == 0:
+            empty_page_count += 1
+            print(f"[WARN] empty page streak: {empty_page_count}")
 
-            # ★ここで完全フィルタ
-            if not is_stock_row(th_text):
+            if empty_page_count >= 3:
+                print("===== STOP: 連続空ページ =====")
+                break
+            continue
+
+        empty_page_count = 0
+
+        page_saved = 0
+
+        for row in rows:
+
+            text = row.text.strip().replace("\n", " ")
+
+            # ノイズ除外
+            if not text:
+                continue
+            if "プレミアム" in text:
                 continue
 
-            lines = [x.strip() for x in th_text.split("\n") if x.strip()]
-
-            name = lines[0]
-            code = lines[-1]
-
-            # tdが足りない行はスキップ
-            if len(tds) < 7:
+            m = re.search(r"\b\d{4}[A-Z]?\b", text)
+            if not m:
                 continue
 
-            price = tds[0].text.strip()
-            prev_value = tds[1].text.strip()
-            prev_rate = tds[2].text.strip()
-            trading_value = tds[3].text.strip()
-            per = tds[4].text.strip()
-            pbr = tds[5].text.strip()
-            yield_value = tds[6].text.strip()
+            code = m.group(0)
 
-            results.append([
-                today,
-                code,
-                name,
-                "",  # 市場（必要ならthから抽出可）
-                price,
-                prev_value,
-                prev_rate,
-                trading_value,
-                per,
-                pbr,
-                yield_value
-            ])
+            try:
+                parts = text.split()
 
-            print("OK:", code, name)
+                # 最低限の安全チェック
+                if len(parts) < 6:
+                    continue
 
-        except Exception as e:
-            print("skip:", e)
+                writer.writerow([
+                    today,
+                    rank,
+                    code,
+                    "",   # 銘柄名は簡略化（必要なら強化可）
+                    "",
+                    "",
+                    "",
+                    "",
+                    "",
+                    "",
+                    "",
+                    ""
+                ])
 
-    # ==========================================
-    # CSV出力
-    # ==========================================
-    with open(output_file, "w", newline="", encoding="utf-8-sig") as f:
+                rank += 1
+                page_saved += 1
+                saved_total += 1
 
-        writer = csv.writer(f)
-        writer.writerow(header)
-        writer.writerows(results)
+            except Exception as e:
+                print("[ERROR]", e)
+                continue
 
-    print("\n===== DONE =====")
-    print("rows saved:", len(results))
-    print("file:", output_file)
+        print(f"[RESULT] page saved rows: {page_saved}")
+        print(f"[TOTAL] saved so far: {saved_total}")
 
-finally:
-    driver.quit()
-    print("===== END =====")
+print("\n===== END =====")
+print(f"file: {output_file}")
+
+driver.quit()
