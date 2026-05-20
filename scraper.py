@@ -1,129 +1,48 @@
-import re
-import csv
 from selenium import webdriver
 from selenium.webdriver.common.by import By
-from selenium.webdriver.chrome.options import Options
-import time
+import csv
 
-URL = "https://s.kabutan.jp/warnings/trading_value_ranking/?market=all&page=208"
-DATE = "20260520"
-OUTPUT = "trading_value_ranking_20260520.csv"
+date = "20260520"
+page_no = 208
+start_no = 4141
 
-MARKET_PATTERN = r"^(東S|東P|名M|東E|東G)$"
-CODE_PATTERN = r"^[0-9A-Z]{4,5}$"
+driver = webdriver.Chrome()
+url = f"https://s.kabutan.jp/warnings/trading_value_ranking/?market=all&page={page_no}"
+driver.get(url)
 
-HEADER = [
-    "日付","No","コード","銘柄名","市場",
-    "株価(百万円)","前日比","前日比(%)",
-    "売買代金","PER","PBR","利回り"
-]
+# tbodyのtrを全部取得
+trs = driver.find_elements(By.CSS_SELECTOR, "div.gray-sticky-table table tbody tr")
 
-def init_csv():
-    with open(OUTPUT, "w", newline="", encoding="utf-8-sig") as f:
-        writer = csv.writer(f)
-        writer.writerow(HEADER)
+raw_rows = []
+for tr in trs:
+    th = tr.find_element(By.TAG_NAME, "th")
+    td_list = tr.find_elements(By.TAG_NAME, "td")
+    
+    # 銘柄名
+    stock_name = th.find_element(By.TAG_NAME, "p").text
+    # コードと市場
+    code = th.find_element(By.CSS_SELECTOR, "div.flex.items-center").text.split()[0]
+    market = th.find_element(By.CSS_SELECTOR, "div.flex.items-center span").text
+    
+    # 株価、前日比、売買代金、PER、PBR、利回り
+    price = td_list[0].text
+    diff_num = td_list[1].text.replace("\n", " ")
+    sales = td_list[2].text
+    per = td_list[4].text
+    pbr = td_list[5].text
+    yld = td_list[6].text
+    
+    # raw_data文字列作成
+    raw = f"{stock_name} {code} {market} {price} {diff_num} {sales} {per} {pbr} {yld}"
+    raw_rows.append(raw)
 
-def create_driver():
-    options = Options()
-    options.add_argument("--headless=new")
-    options.add_argument("--no-sandbox")
-    options.add_argument("--disable-dev-shm-usage")
-    options.add_argument("--disable-gpu")
-    options.add_argument("--window-size=1280,800")
-    return webdriver.Chrome(options=options)
+driver.quit()
 
-# =========================
-# データ抽出（ここが核心）
-# =========================
-def extract_rows(driver):
-    driver.get(URL)
-    time.sleep(3)
+# CSVに出力
+with open("trading_value_ranking_20260520.csv", "w", newline="", encoding="utf-8") as f:
+    writer = csv.writer(f, delimiter="\t")
+    writer.writerow(["日付", "順位", "raw_data"])
+    for i, row in enumerate(raw_rows):
+        writer.writerow([date, start_no + i, row])
 
-    text = driver.find_element(By.TAG_NAME, "body").text
-    lines = [l.strip() for l in text.split("\n") if l.strip()]
-
-    rows = []
-
-    i = 0
-    while i < len(lines) - 10:
-        line = lines[i]
-
-        # 銘柄名っぽい行スキップ
-        if "件 /" in line or "前へ" in line or "次へ" in line:
-            i += 1
-            continue
-
-        # コード判定
-        if re.match(CODE_PATTERN, line):
-            code = line
-
-            # 次行が市場コードか確認
-            if i + 1 < len(lines) and re.match(MARKET_PATTERN, lines[i + 1]):
-
-                market = lines[i + 1]
-
-                # 銘柄名はその1つ前
-                name = lines[i - 1] if i > 0 else ""
-
-                # 数値群
-                # ここは固定順で吸収
-                try:
-                    price_line = lines[i + 2].split()
-                    price = price_line[0]
-                    diff = price_line[1] if len(price_line) > 1 else ""
-
-                    diff_pct = lines[i + 3]
-                    volume = lines[i + 4]
-                    per = lines[i + 5]
-                    pbr = lines[i + 6]
-                    yield_ = lines[i + 7]
-
-                    rows.append([
-                        DATE,
-                        len(rows) + 4141,
-                        code,
-                        name,
-                        market,
-                        price,
-                        diff,
-                        diff_pct,
-                        volume,
-                        per,
-                        pbr,
-                        yield_
-                    ])
-
-                except:
-                    pass
-
-                i += 8
-                continue
-
-        i += 1
-
-    return rows
-
-def main():
-    print("===== START =====")
-
-    init_csv()
-
-    driver = create_driver()
-
-    try:
-        rows = extract_rows(driver)
-
-        print("[RESULT] rows:", len(rows))
-
-        with open(OUTPUT, "a", newline="", encoding="utf-8-sig") as f:
-            writer = csv.writer(f)
-            writer.writerows(rows)
-
-    finally:
-        driver.quit()
-
-    print("===== END =====")
-
-
-if __name__ == "__main__":
-    main()
+print(f"[DONE] saved rows: {len(raw_rows)}")
