@@ -3,25 +3,69 @@ import time
 import random
 import csv
 from datetime import datetime
+import glob
 from selenium import webdriver
 from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.common.by import By
 from webdriver_manager.chrome import ChromeDriverManager
+import pandas as pd
+import sys
 
 # =========================
 # 設定
 # =========================
-URL = "https://kabutan.jp/warning/trading_value_ranking?market=0&capitalization=-1&dispmode=normal&stc=&stm=0&page=1"
+MAX_FILES = 150
+FOLDER = os.path.join(os.getcwd(), "output")
+
+# 15件 × 200ページ = 3000件
+TOTAL_PAGES = 200
+
+TOP_N = 3000
+
+BASE_URL = (
+    "https://kabutan.jp/warning/trading_value_ranking"
+    "?market=0&capitalization=-1&dispmode=normal&stc=&stm=0"
+)
+
+os.makedirs(FOLDER, exist_ok=True)
 
 # =========================
-# ログ
+# ログ関数
 # =========================
+log_file = os.path.join(FOLDER, "trading_value_ranking.log")
+
 def log(msg):
-    print(f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')} {msg}")
+    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    print(f"{timestamp} {msg}")
+
+    with open(log_file, "a", encoding="utf-8") as f:
+        f.write(f"{timestamp} {msg}\n")
 
 # =========================
-# Selenium設定
+# 前回比較ファイル
+# =========================
+first_page_file = os.path.join(FOLDER, "first_page15_before.csv")
+
+if os.path.exists(first_page_file):
+    prev_head15 = open(first_page_file, "r", encoding="utf-8").read().splitlines()
+    log(f"比較ファイル: {os.path.basename(first_page_file)}")
+else:
+    prev_head15 = []
+    log("比較ファイル: なし")
+
+# =========================
+# 今日のCSVファイル名
+# =========================
+today = datetime.now().strftime("%Y%m%d")
+
+filename = os.path.join(
+    FOLDER,
+    f"trading_value_ranking_{today}.csv"
+)
+
+# =========================
+# Seleniumセットアップ
 # =========================
 options = Options()
 options.add_argument("--headless")
@@ -29,92 +73,274 @@ options.add_argument("--no-sandbox")
 options.add_argument("--disable-dev-shm-usage")
 options.add_argument("--user-agent=Mozilla/5.0")
 
-driver = webdriver.Chrome(
-    service=Service(ChromeDriverManager().install()),
-    options=options
-)
+driver = None
 
-log("【取得開始】")
+start_time = datetime.now()
+
+rank = 1
+
+log("【売買代金ランキング取得 開始】")
 
 try:
-    driver.get(URL)
-    time.sleep(2 + random.random())
-
-    rows = driver.find_elements(By.CSS_SELECTOR, "tbody tr")
-
-    if not rows:
-        log("データが取得できません")
-        raise SystemExit
+    driver = webdriver.Chrome(
+        service=Service(ChromeDriverManager().install()),
+        options=options
+    )
 
     # =========================
-    # ★ 1件のみ取得
+    # CSVヘッダ
     # =========================
-    row = rows[0]
+    with open(filename, "w", newline="", encoding="utf-8") as f:
+        writer = csv.writer(f)
 
-    # 銘柄名
-    name_elem = row.find_elements(By.CSS_SELECTOR, "th a p, th a abbr")
-    name = name_elem[0].text.strip() if name_elem else ""
+        writer.writerow([
+            "No",
+            "コード",
+            "銘柄名",
+            "市場",
+            "株価",
+            "前日比",
+            "前日比(%)",
+            "売買代金",
+            "PER(倍)",
+            "PBR(倍)",
+            "利回り(%)"
+        ])
 
-    # コード・市場
-    code, market = "", ""
-    code_market = row.find_elements(By.CSS_SELECTOR, "th a div.flex")
-    if code_market:
-        parts = code_market[0].text.split()
-        if len(parts) >= 1:
-            code = parts[0].strip()
-        if len(parts) >= 2:
-            market = parts[1].strip()
-
-    # TD取得
-    tds = row.find_elements(By.TAG_NAME, "td")
-    if len(tds) < 7:
-        log("列不足のため終了")
-        raise SystemExit
-
-    price = tds[0].text.strip()
-
-    prev_text = tds[1].text.split("\n")
-    prev_diff = prev_text[0].strip() if len(prev_text) > 0 else ""
-    prev_diff_percent = prev_text[1].replace("%", "").strip() if len(prev_text) > 1 else ""
-
-    volume = tds[2].text.replace("株", "").replace(",", "").strip()
-    per = tds[4].text.replace("倍", "").strip()
-    pbr = tds[5].text.replace("倍", "").strip()
-    yield_ = tds[6].text.replace("%", "").strip()
-
-    try:
-        trade_amount = int(float(price.replace(",", "")) * float(volume))
-    except:
-        trade_amount = 0
+    first_page_rows_text = []
 
     # =========================
-    # ★ Display（確認表示）
+    # ページ巡回
     # =========================
-    print("\n==============================")
-    print("DISPLAY: 取得データ確認（1件）")
-    print("==============================")
+    for page_no in range(1, TOTAL_PAGES + 1):
 
-    print(f"コード            : {code}")
-    print(f"銘柄名            : {name}")
-    print(f"市場              : {market}")
-    print(f"株価              : {price}")
-    print(f"前日比            : {prev_diff}")
-    print(f"前日比(%)         : {prev_diff_percent}")
-    print(f"出来高            : {volume}")
-    print(f"PER               : {per}")
-    print(f"PBR               : {pbr}")
-    print(f"利回り            : {yield_}")
-    print(f"売買代金(概算)    : {trade_amount}")
+        log(f"{page_no:03d}/{TOTAL_PAGES:03d}")
 
-    print("==============================\n")
+        url = f"{BASE_URL}&page={page_no}"
 
-    # =========================
-    # ※DB投入イメージ（未実装）
-    # stock_table st_market にINSERT可能
-    # =========================
-    log("stock_table st_market 用データ取得完了（未保存）")
+        try:
+            driver.get(url)
+
+        except Exception as e:
+            log(f"ページ取得エラー: {e}")
+            continue
+
+        time.sleep(2 + random.random())
+
+        rows = driver.find_elements(By.CSS_SELECTOR, "tbody tr")
+
+        if not rows:
+            log("行が取得できません")
+            continue
+
+        for i, row in enumerate(rows):
+
+            row_text = row.text.replace("\n", " ").strip()
+
+            # =========================
+            # 1ページ目比較保存
+            # =========================
+            if page_no == 1 and i < 15:
+                first_page_rows_text.append(row_text)
+
+            # 前回と同じなら終了
+            if page_no == 1 and i < 15 and prev_head15:
+
+                if i < len(prev_head15):
+
+                    if row_text == prev_head15[i]:
+                        log("前回と同じデータのため終了")
+                        sys.exit(0)
+
+            try:
+                # =========================
+                # 銘柄名
+                # =========================
+                name_elem = row.find_elements(
+                    By.CSS_SELECTOR,
+                    "th a p, th a abbr"
+                )
+
+                if not name_elem:
+                    continue
+
+                name = name_elem[0].text.strip()
+
+                # =========================
+                # コード・市場
+                # =========================
+                code = ""
+                market = ""
+
+                code_market = row.find_elements(
+                    By.CSS_SELECTOR,
+                    "th a div.flex"
+                )
+
+                if code_market:
+                    parts = code_market[0].text.split()
+
+                    if len(parts) >= 1:
+                        code = parts[0].strip()
+
+                    if len(parts) >= 2:
+                        market = parts[1].strip()
+
+                # =========================
+                # td取得
+                # =========================
+                tds = row.find_elements(By.TAG_NAME, "td")
+
+                if len(tds) < 7:
+                    continue
+
+                price = tds[0].text.strip()
+
+                prev_text = tds[1].text.split("\n")
+
+                prev_diff = (
+                    prev_text[0].strip()
+                    if len(prev_text) > 0 else ""
+                )
+
+                prev_diff_percent = (
+                    prev_text[1].replace("%", "").strip()
+                    if len(prev_text) > 1 else ""
+                )
+
+                # 売買代金
+                trading_value = (
+                    tds[2]
+                    .text
+                    .replace(",", "")
+                    .replace("百万円", "")
+                    .strip()
+                )
+
+                per = tds[4].text.replace("倍", "").strip()
+                pbr = tds[5].text.replace("倍", "").strip()
+                yield_ = tds[6].text.replace("%", "").strip()
+
+                # =========================
+                # CSV保存
+                # =========================
+                with open(filename, "a", newline="", encoding="utf-8") as f:
+
+                    writer = csv.writer(f)
+
+                    writer.writerow([
+                        rank,
+                        code,
+                        name,
+                        market,
+                        price,
+                        prev_diff,
+                        prev_diff_percent,
+                        trading_value,
+                        per,
+                        pbr,
+                        yield_
+                    ])
+
+                rank += 1
+
+                if rank > TOP_N:
+                    break
+
+            except Exception as e:
+                log(f"エラー: {e}")
+                continue
+
+        if rank > TOP_N:
+            break
+
+except Exception as e:
+    log(f"重大エラー: {e}")
 
 finally:
-    driver.quit()
-    log("ブラウザ終了")
-    log("【取得終了】")
+    if driver:
+        driver.quit()
+        log("ブラウザ終了")
+
+# =========================
+# first_page15_before.csv 保存
+# =========================
+with open(first_page_file, "w", encoding="utf-8") as f:
+
+    for line in first_page_rows_text[:15]:
+        f.write(line + "\n")
+
+# =========================
+# 古いCSV削除
+# =========================
+all_files = sorted(
+    glob.glob(
+        os.path.join(
+            FOLDER,
+            "trading_value_ranking_*.csv"
+        )
+    )
+)
+
+if len(all_files) > MAX_FILES:
+
+    for f in all_files[:-MAX_FILES]:
+
+        try:
+            os.remove(f)
+
+        except Exception as e:
+            log(f"削除失敗: {e}")
+
+# =========================
+# mergedファイル作成
+# =========================
+merge_files = [
+    f for f in sorted(
+        glob.glob(
+            os.path.join(
+                FOLDER,
+                "trading_value_ranking_*.csv"
+            )
+        )
+    )
+    if "merged" not in f
+]
+
+df_list = []
+
+for f in merge_files:
+
+    df = pd.read_csv(f, encoding="utf-8")
+
+    df.insert(
+        0,
+        "日付",
+        f.split("_")[-1].replace(".csv", "")
+    )
+
+    df_list.append(df)
+
+if df_list:
+
+    df_all = pd.concat(df_list, ignore_index=True)
+
+    merged_filename = os.path.join(
+        FOLDER,
+        "trading_value_ranking_merged.csv"
+    )
+
+    df_all.to_csv(
+        merged_filename,
+        index=False,
+        encoding="utf-8"
+    )
+
+    log(f"結合完了: {merged_filename}")
+
+# =========================
+# 終了ログ
+# =========================
+end_time = datetime.now()
+
+log(f"処理時間: {(end_time - start_time).seconds}秒")
