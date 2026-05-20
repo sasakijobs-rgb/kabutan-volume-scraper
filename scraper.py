@@ -2,8 +2,6 @@ import os
 import time
 import random
 import csv
-import re
-import sys
 from datetime import datetime
 
 from selenium import webdriver
@@ -23,7 +21,6 @@ os.makedirs("output", exist_ok=True)
 
 merged_file = "output/trading_value_ranking_merged.csv"
 daily_file = f"output/trading_value_ranking_{today}.csv"
-first_page_file = "output/first_page15_before.csv"
 
 header = [
     "日付",
@@ -48,7 +45,7 @@ if not os.path.exists(merged_file):
         csv.writer(f).writerow(header)
 
 # ==========================================
-# 古い日次CSV削除（150件制限）
+# 古いファイル削除（150制限）
 # ==========================================
 def cleanup_old_daily_files():
     folder = "output"
@@ -88,149 +85,103 @@ options.add_argument("--window-size=1400,2200")
 driver = webdriver.Chrome(options=options)
 
 # ==========================================
-# メイン処理
+# メイン
 # ==========================================
-def main():
-
+try:
     print("===== START =====")
 
     cleanup_old_daily_files()
 
-    try:
-        # ==========================================
-        # スナップショット取得
-        # ==========================================
-        driver.get(BASE_URL.format(1))
-        time.sleep(random.uniform(3, 6))
+    with open(daily_file, "w", newline="", encoding="utf-8-sig") as df, \
+         open(merged_file, "a", newline="", encoding="utf-8-sig") as mf:
 
-        rows = driver.find_elements(By.CSS_SELECTOR, "tbody tr")
+        daily_writer = csv.writer(df)
+        merged_writer = csv.writer(mf)
 
-        snapshot = []
-        for r in rows[:15]:
-            snapshot.append(r.text.replace("\n", " | "))
+        daily_writer.writerow(header)
 
-        current_snapshot = "\n".join(snapshot)
-
-        prev_snapshot = ""
-        if os.path.exists(first_page_file):
-            with open(first_page_file, "r", encoding="utf-8") as f:
-                prev_snapshot = f.read().strip()
+        rank = 1
+        empty_count = 0
 
         # ==========================================
-        # 変更なしなら完全終了（ここが重要）
+        # ページループ（毎回実行）
         # ==========================================
-        if current_snapshot == prev_snapshot:
-            print("⚠ 変更なし → 終了")
-            return
+        for page in range(1, MAX_PAGES + 1):
 
-        print("✔ 更新あり → 続行")
+            url = BASE_URL.format(page)
+            print("PAGE:", page, url)
 
-        # ==========================================
-        # ここで初めて上書き
-        # ==========================================
-        with open(first_page_file, "w", encoding="utf-8") as f:
-            f.write(current_snapshot)
+            driver.get(url)
+            time.sleep(random.uniform(2, 4))
 
-        # ==========================================
-        # CSV準備
-        # ==========================================
-        with open(daily_file, "w", newline="", encoding="utf-8-sig") as df, \
-             open(merged_file, "a", newline="", encoding="utf-8-sig") as mf:
+            rows = driver.find_elements(By.CSS_SELECTOR, "tbody tr")
 
-            daily_writer = csv.writer(df)
-            merged_writer = csv.writer(mf)
+            if len(rows) == 0:
+                empty_count += 1
+                print(f"⚠ empty page {page} ({empty_count})")
 
-            daily_writer.writerow(header)
+                if empty_count >= 3:
+                    print("⚠ 連続空ページ → 終了")
+                    break
+                continue
 
-            rank = 1
             empty_count = 0
 
-            # ==========================================
-            # ページループ
-            # ==========================================
-            for page in range(1, MAX_PAGES + 1):
+            for row in rows:
 
-                url = BASE_URL.format(page)
-                print("PAGE:", page, url)
+                tds = row.find_elements(By.TAG_NAME, "td")
 
-                driver.get(url)
-                time.sleep(random.uniform(2, 4))
-
-                rows = driver.find_elements(By.CSS_SELECTOR, "tbody tr")
-
-                if len(rows) == 0:
-                    empty_count += 1
-                    print(f"⚠ empty page {page} ({empty_count})")
-
-                    if empty_count >= 3:
-                        print("⚠ 連続空ページ → 終了")
-                        break
+                if len(tds) < 8:
                     continue
 
-                empty_count = 0
+                try:
+                    code = tds[0].text.strip()
 
-                for row in rows:
-
-                    tds = row.find_elements(By.TAG_NAME, "td")
-
-                    if len(tds) < 8:
+                    if not code.isdigit():
                         continue
 
-                    try:
-                        code = tds[0].text.strip()
+                    name = tds[1].text.strip()
+                    market = tds[2].text.strip()
 
-                        if not code.isdigit():
-                            continue
+                    price = tds[3].text.strip()
+                    prev_value = tds[4].text.strip()
+                    prev_rate = tds[5].text.strip()
+                    trading_value = tds[6].text.strip()
+                    per = tds[7].text.strip() if len(tds) > 7 else ""
+                    pbr = tds[8].text.strip() if len(tds) > 8 else ""
+                    yield_value = tds[9].text.strip() if len(tds) > 9 else ""
 
-                        name = tds[1].text.strip()
-                        market = tds[2].text.strip()
+                    price = price.replace(",", "")
+                    prev_value = prev_value.replace(",", "")
+                    trading_value = trading_value.replace(",", "")
 
-                        price = tds[3].text.strip()
-                        prev_value = tds[4].text.strip()
-                        prev_rate = tds[5].text.strip()
-                        trading_value = tds[6].text.strip()
-                        per = tds[7].text.strip() if len(tds) > 7 else ""
-                        pbr = tds[8].text.strip() if len(tds) > 8 else ""
-                        yield_value = tds[9].text.strip() if len(tds) > 9 else ""
+                    row_data = [
+                        today,
+                        rank,
+                        code,
+                        name,
+                        market,
+                        price,
+                        prev_value,
+                        prev_rate,
+                        trading_value,
+                        per,
+                        pbr,
+                        yield_value
+                    ]
 
-                        price = price.replace(",", "")
-                        prev_value = prev_value.replace(",", "")
-                        trading_value = trading_value.replace(",", "")
+                    daily_writer.writerow(row_data)
+                    merged_writer.writerow(row_data)
 
-                        row_data = [
-                            today,
-                            rank,
-                            code,
-                            name,
-                            market,
-                            price,
-                            prev_value,
-                            prev_rate,
-                            trading_value,
-                            per,
-                            pbr,
-                            yield_value
-                        ]
+                    rank += 1
 
-                        daily_writer.writerow(row_data)
-                        merged_writer.writerow(row_data)
+                except Exception as e:
+                    print("⚠ row error:", e)
 
-                        rank += 1
+    print("===== 完了 =====")
+    print("daily:", daily_file)
+    print("merged:", merged_file)
 
-                    except Exception as e:
-                        print("⚠ row error:", e)
-                        continue
-
-        print("===== 完了 =====")
-        print("daily:", daily_file)
-        print("merged:", merged_file)
-
-    finally:
-        driver.quit()
-        print("===== END =====")
-
-# ==========================================
-# 実行（exit禁止・安全制御）
-# ==========================================
-if __name__ == "__main__":
-    main()
+finally:
+    driver.quit()
+    print("===== END =====")
