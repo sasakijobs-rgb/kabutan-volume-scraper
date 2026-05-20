@@ -12,7 +12,7 @@ from webdriver_manager.chrome import ChromeDriverManager
 # ==========================================
 url = "https://kabutan.jp/warning/trading_value_ranking?market=0&capitalization=-1&dispmode=normal&stc=&stm=0&page=1"
 
-print("===== 開始 =====")
+print("===== START =====")
 print(url)
 
 # ==========================================
@@ -20,27 +20,23 @@ print(url)
 # ==========================================
 options = Options()
 
-# headlessを使わない
+# headlessなし
 # options.add_argument("--headless")
 
-# bot判定回避
-options.add_argument("--disable-blink-features=AutomationControlled")
-
-# 通常ブラウザ風
-options.add_argument("--start-maximized")
-
-# Linux用
 options.add_argument("--no-sandbox")
 options.add_argument("--disable-dev-shm-usage")
 
+# bot検知回避
+options.add_argument("--disable-blink-features=AutomationControlled")
+
 # UserAgent
 options.add_argument(
-    "user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+    "--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
     "AppleWebKit/537.36 (KHTML, like Gecko) "
     "Chrome/124.0.0.0 Safari/537.36"
 )
 
-# automation非表示
+# automation表示削除
 options.add_experimental_option(
     "excludeSwitches",
     ["enable-automation"]
@@ -51,7 +47,10 @@ options.add_experimental_option(
     False
 )
 
-print("===== Chrome起動 =====")
+# ==========================================
+# driver起動
+# ==========================================
+print("===== Chrome 起動 =====")
 
 driver = webdriver.Chrome(
     service=Service(ChromeDriverManager().install()),
@@ -65,155 +64,140 @@ Object.defineProperty(navigator, 'webdriver', {
 })
 """)
 
-print("===== Chrome起動完了 =====")
+print("===== Chrome 起動完了 =====")
 
 try:
 
     # ==========================================
-    # アクセス
+    # ページアクセス
     # ==========================================
-    print("===== アクセス開始 =====")
+    print("===== access =====")
 
     driver.get(url)
 
-    print("===== アクセス完了 =====")
-
-    # 人間っぽい待機
     sleep_sec = random.uniform(8, 12)
 
-    print(f"===== sleep {sleep_sec:.2f} 秒 =====")
+    print(f"sleep {sleep_sec:.2f} sec")
 
     time.sleep(sleep_sec)
 
     # ==========================================
-    # 基本情報
+    # TITLE確認
     # ==========================================
     print("\n===== TITLE =====")
     print(driver.title)
 
-    print("\n===== CURRENT URL =====")
-    print(driver.current_url)
-
     # ==========================================
-    # body確認
+    # TABLE確認
     # ==========================================
-    print("\n===== BODY TEXT =====")
-
-    body = driver.find_element(By.TAG_NAME, "body")
-
-    body_text = body.text
-
-    print(body_text[:2000])
-
-    # ==========================================
-    # HTML確認
-    # ==========================================
-    html = driver.page_source
-
-    print("\n===== HTML文字数 =====")
-    print(len(html))
-
-    print("\n===== HTML先頭1000文字 =====")
-    print(html[:1000])
-
-    # ==========================================
-    # table確認
-    # ==========================================
-    print("\n===== TABLE確認 =====")
-
-    tables = driver.find_elements(By.TAG_NAME, "table")
-
-    print("table数 =", len(tables))
-
-    # ==========================================
-    # stock_table確認
-    # ==========================================
-    stock_tables = driver.find_elements(
-        By.CSS_SELECTOR,
-        "table.stock_table"
-    )
-
-    print("stock_table数 =", len(stock_tables))
-
-    # ==========================================
-    # st_market確認
-    # ==========================================
-    market_tables = driver.find_elements(
-        By.CSS_SELECTOR,
-        "table.st_market"
-    )
-
-    print("st_market数 =", len(market_tables))
-
-    # ==========================================
-    # 両方確認
-    # ==========================================
-    full_tables = driver.find_elements(
+    tables = driver.find_elements(
         By.CSS_SELECTOR,
         "table.stock_table.st_market"
     )
 
-    print("stock_table st_market数 =", len(full_tables))
+    print("\n===== table count =====")
+    print(len(tables))
 
     # ==========================================
-    # tr確認
+    # TR確認
     # ==========================================
-    trs = driver.find_elements(By.TAG_NAME, "tr")
+    rows = driver.find_elements(
+        By.CSS_SELECTOR,
+        "table.stock_table.st_market tbody tr"
+    )
 
-    print("\ntr数 =", len(trs))
-
-    # ==========================================
-    # selector確認
-    # ==========================================
-    print("\n===== selector確認 =====")
-
-    selectors = [
-        "table tr",
-        "tbody tr",
-        "table.stock_table tr",
-        "table.stock_table.st_market tr",
-        ".stock_table tr",
-        ".st_market tr"
-    ]
-
-    for selector in selectors:
-
-        elems = driver.find_elements(
-            By.CSS_SELECTOR,
-            selector
-        )
-
-        print(selector, "=", len(elems))
+    print("\n===== tr count =====")
+    print(len(rows))
 
     # ==========================================
-    # 1件表示
+    # 1件取得
     # ==========================================
-    print("\n===== 最初のTR =====")
+    if len(rows) > 0:
 
-    if len(trs) > 0:
+        print("\n===== first row raw =====")
+        print(rows[0].text)
 
-        print(trs[0].text)
+        row = rows[0]
+
+        # ------------------------------
+        # td一覧
+        # ------------------------------
+        tds = row.find_elements(By.TAG_NAME, "td")
+
+        print("\n===== td count =====")
+        print(len(tds))
+
+        for i, td in enumerate(tds):
+
+            print(f"td[{i}] = {td.text}")
+
+        # ------------------------------
+        # th一覧
+        # ------------------------------
+        ths = row.find_elements(By.TAG_NAME, "th")
+
+        print("\n===== th count =====")
+        print(len(ths))
+
+        for i, th in enumerate(ths):
+
+            print(f"th[{i}] = {th.text}")
+
+        # ==========================================
+        # 実データ取得
+        # ==========================================
+        code = tds[0].text.strip()
+
+        name = ths[0].text.strip()
+
+        market = tds[1].text.strip()
+
+        price = tds[4].text.strip()
+
+        prev_diff = tds[6].text.strip()
+
+        prev_diff_percent = tds[7].text.strip()
+
+        trading_value = tds[8].text.strip()
+
+        per = tds[9].text.strip()
+
+        pbr = tds[10].text.strip()
+
+        yield_ = tds[11].text.strip()
+
+        print("\n===== RESULT =====")
+
+        print("コード =", code)
+        print("銘柄名 =", name)
+        print("市場 =", market)
+        print("株価 =", price)
+        print("前日比 =", prev_diff)
+        print("前日比% =", prev_diff_percent)
+        print("売買代金 =", trading_value)
+        print("PER =", per)
+        print("PBR =", pbr)
+        print("利回り =", yield_)
 
     else:
 
-        print("TRなし")
+        print("TRが取得できません")
 
     # ==========================================
     # screenshot
     # ==========================================
     driver.save_screenshot("debug.png")
 
-    print("\n===== screenshot保存 =====")
-    print("debug.png")
+    print("\n===== screenshot saved =====")
 
 except Exception as e:
 
-    print("\n===== エラー =====")
+    print("\n===== ERROR =====")
     print(type(e))
     print(e)
 
 finally:
 
-    print("\n===== Chrome終了 =====")
-
     driver.quit()
+
+    print("\n===== END =====")
