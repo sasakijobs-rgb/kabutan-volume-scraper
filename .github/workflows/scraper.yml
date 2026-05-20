@@ -21,16 +21,32 @@ jobs:
         with:
           python-version: "3.11"
 
-      - name: Install dependencies
+      # =========================
+      # Python依存
+      # =========================
+      - name: Install Python dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install playwright pandas
-          playwright install chromium
+          pip install selenium pandas
 
+      # =========================
+      # 軽量Chrome（ここが重要）
+      # =========================
+      - name: Install Chromium
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y chromium-browser chromium-chromedriver
+
+      # =========================
+      # 実行
+      # =========================
       - name: Run scraper
         run: |
           python scraper.py
 
+      # =========================
+      # 保存
+      # =========================
       - name: Commit results
         run: |
           git config --global user.name "github-actions[bot]"
