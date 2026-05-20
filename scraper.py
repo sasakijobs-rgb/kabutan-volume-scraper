@@ -1,152 +1,232 @@
+import os
+import re
 import time
 import random
+from datetime import datetime
 
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.chrome.options import Options
 
-
+# ==========================================
+# 設定
+# ==========================================
 URL = "https://s.kabutan.jp/warnings/trading_value_ranking/?market=all&page=1"
+
+TODAY = datetime.now().strftime("%Y%m%d")
 
 print("===== START =====")
 print("URL:", URL)
 
-# =========================
-# Chrome（安定優先）
-# =========================
+# ==========================================
+# Chrome設定
+# ==========================================
 options = Options()
+
+# GitHub Actions用
 options.add_argument("--headless=new")
 options.add_argument("--no-sandbox")
 options.add_argument("--disable-dev-shm-usage")
-options.add_argument("--window-size=1920,1080")
-options.add_argument("--user-agent=Mozilla/5.0 Chrome/120")
+
+# 軽量化
+options.add_argument("--disable-gpu")
+options.add_argument("--window-size=1280,2000")
+
+# UserAgent
+options.add_argument(
+    "--user-agent=Mozilla/5.0 "
+    "(Windows NT 10.0; Win64; x64) "
+    "AppleWebKit/537.36 "
+    "(KHTML, like Gecko) "
+    "Chrome/124.0.0.0 Safari/537.36"
+)
+
+# GitHub ActionsのChromeパス
+options.binary_location = "/usr/bin/chromium-browser"
+
+# ==========================================
+# Chrome起動
+# ==========================================
+print("\n===== Chrome 起動 =====")
 
 driver = webdriver.Chrome(options=options)
 
 try:
-    print("\n===== Chrome 起動 =====")
 
+    # ==========================================
+    # アクセス
+    # ==========================================
     driver.get(URL)
 
-    time.sleep(random.uniform(3, 6))
+    sleep_sec = random.uniform(5, 8)
 
+    print(f"sleep {sleep_sec:.2f} sec")
+
+    time.sleep(sleep_sec)
+
+    # ==========================================
+    # TITLE
+    # ==========================================
     print("\n===== TITLE =====")
     print(driver.title)
 
+    # ==========================================
+    # 行取得
+    # ==========================================
     rows = driver.find_elements(By.CSS_SELECTOR, "tbody tr")
 
     print("\n===== ROW COUNT =====")
     print(len(rows))
 
-    if not rows:
-        print("❌ データ取得できません（WAF or セレクタ不一致）")
-        driver.save_screenshot("debug.png")
+    if len(rows) == 0:
+        print("行取得失敗")
+        driver.quit()
         exit()
+
+    # ==========================================
+    # 1件目
+    # ==========================================
+    rank = 1
 
     row = rows[0]
 
     print("\n===== RAW ROW =====")
     print(row.text)
 
-    # =========================
-    # 銘柄（改行対応）
-    # =========================
-    th = row.find_element(By.TAG_NAME, "th")
-    th_lines = [x.strip() for x in th.text.split("\n") if x.strip()]
+    # ==========================================
+    # 改行分割
+    # ==========================================
+    lines = row.text.split("\n")
 
-    code = ""
-    name = ""
-    market = ""
+    print("\n===== SPLIT DEBUG =====")
 
-    # div/p構造優先（安定）
-    try:
-        code = th.find_element(By.CSS_SELECTOR, "div").text.strip()
-    except:
-        pass
+    for i, line in enumerate(lines):
+        print(i, line)
 
-    try:
-        name = th.find_element(By.CSS_SELECTOR, "p").text.strip()
-    except:
-        pass
+    # ==========================================
+    # 最低件数チェック
+    # ==========================================
+    if len(lines) < 9:
+        print("\n❌ 想定より項目数が少ない")
+        driver.save_screenshot("debug.png")
+        driver.quit()
+        exit()
 
-    # fallback
-    if not code or not name:
-        if len(th_lines) >= 1:
-            parts = th_lines[0].split()
-            if len(parts) >= 2:
-                code = parts[0]
-                name = parts[1]
+    # ==========================================
+    # パース
+    # ==========================================
+    name = lines[0].strip()
 
-    if len(th_lines) >= 2:
-        market = th_lines[1]
+    code = lines[1].strip()
 
-    # =========================
-    # 数値データ
-    # =========================
-    tds = row.find_elements(By.TAG_NAME, "td")
+    market = lines[2].strip()
 
-    def safe(i):
-        return tds[i].text.strip() if i < len(tds) else ""
+    # 51,290 +1,520
+    price_prev = lines[3].strip()
 
-    price = safe(0)
-    prev = safe(1)
-    trade_value = safe(3)
-    per = safe(4)
-    pbr = safe(5)
-    yield_ = safe(6)
+    # +3.05%
+    prev_rate = lines[4].strip()
 
-    # =========================
-    # DISPLAY（ここがメイン）
-    # =========================
+    # 1,588,513
+    trading_value = lines[5].strip()
+
+    # ー倍
+    per = lines[6].strip()
+
+    # 20.0倍
+    pbr = lines[7].strip()
+
+    # ー%
+    yield_value = lines[8].strip()
+
+    # ==========================================
+    # 株価 / 前日比(値)
+    # ==========================================
+    m = re.match(r"(.+?)\s+([+-].+)", price_prev)
+
+    if m:
+        price = m.group(1).strip()
+        prev_value = m.group(2).strip()
+    else:
+        price = price_prev
+        prev_value = ""
+
+    # ==========================================
+    # カンマ除去
+    # ==========================================
+    price = price.replace(",", "")
+    prev_value = prev_value.replace(",", "")
+    trading_value = trading_value.replace(",", "")
+
+    # ==========================================
+    # 表示
+    # ==========================================
     print("\n==============================")
-    print("📊 取得データチェック（1件）")
+    print("📊 取得データチェック")
     print("==============================")
 
-    def show(label, value):
-        status = "OK" if value else "NG"
-        print(f"{label:<10}: {value} [{status}]")
+    print(f"0 日付        : {TODAY}")
+    print(f"1 順位        : {rank}")
+    print(f"2 コード      : {code}")
+    print(f"3 銘柄名      : {name}")
+    print(f"4 市場        : {market}")
+    print(f"5 株価        : {price}")
+    print(f"6 前日比(値)  : {prev_value}")
+    print(f"7 前日比(率)  : {prev_rate}")
+    print(f"8 売買代金    : {trading_value}")
+    print(f"9 PER         : {per}")
+    print(f"10 PBR        : {pbr}")
+    print(f"11 利回り      : {yield_value}")
 
-    show("コード", code)
-    show("銘柄名", name)
-    show("市場", market)
-    show("株価", price)
-    show("前日比", prev)
-    show("売買代金", trade_value)
-    show("PER", per)
-    show("PBR", pbr)
-    show("利回り", yield_)
+    # ==========================================
+    # CSV用データ
+    # ==========================================
+    record = [
+        TODAY,
+        rank,
+        code,
+        name,
+        market,
+        price,
+        prev_value,
+        prev_rate,
+        trading_value,
+        per,
+        pbr,
+        yield_value
+    ]
 
-    print("\n==============================")
+    print("\n===== CSV RECORD =====")
 
-    # 参考：未取得チェックまとめ
-    missing = []
-    for k, v in {
-        "コード": code,
-        "銘柄名": name,
-        "市場": market,
-        "株価": price,
-        "前日比": prev,
-        "売買代金": trade_value,
-        "PER": per,
-        "PBR": pbr,
-        "利回り": yield_,
-    }.items():
-        if not v:
-            missing.append(k)
+    print(record)
 
-    if missing:
-        print("⚠ 未取得項目:", missing)
-    else:
-        print("✅ 全項目取得OK")
+    # ==========================================
+    # 出力部分（あとで有効化）
+    # ==========================================
+    #
+    # os.makedirs("output", exist_ok=True)
+    #
+    # csv_path = f"output/trading_value_{TODAY}.csv"
+    #
+    # with open(csv_path, "a", encoding="utf-8-sig") as f:
+    #     f.write(",".join(map(str, record)) + "\n")
+    #
 
+    # ==========================================
+    # screenshot
+    # ==========================================
     driver.save_screenshot("debug.png")
+
     print("\n===== screenshot saved =====")
 
 except Exception as e:
+
     print("\n===== ERROR =====")
     print(type(e))
     print(e)
 
 finally:
+
     driver.quit()
+
     print("\n===== END =====")
