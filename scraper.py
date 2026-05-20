@@ -10,178 +10,208 @@ from webdriver_manager.chrome import ChromeDriverManager
 # =========================
 BASE_URL = "https://kabutan.jp/warning/trading_value_ranking?market=0&capitalization=-1&dispmode=normal&stc=&stm=0&page={}"
 
-# 例:
-# page=1
-# page=2
-# page=3
 PAGE_NO = 1
 
 # =========================
-# Seleniumセットアップ
+# Chrome設定
 # =========================
 options = Options()
-options.add_argument("--headless")
+
+# headless は新方式推奨
+options.add_argument("--headless=new")
+
 options.add_argument("--no-sandbox")
 options.add_argument("--disable-dev-shm-usage")
-options.add_argument("--user-agent=Mozilla/5.0")
+options.add_argument("--disable-gpu")
+options.add_argument("--window-size=1920,1080")
+
+# UserAgent
+options.add_argument(
+    "--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+    "AppleWebKit/537.36 (KHTML, like Gecko) "
+    "Chrome/124.0.0.0 Safari/537.36"
+)
 
 driver = None
 
 try:
+
+    print("===== Chrome 起動開始 =====")
+
     driver = webdriver.Chrome(
         service=Service(ChromeDriverManager().install()),
         options=options
     )
 
+    print("===== Chrome 起動成功 =====")
+
     # =========================
-    # ページ取得
+    # URL生成
     # =========================
     url = BASE_URL.format(PAGE_NO)
 
-    print(f"取得URL: {url}")
+    print("===== アクセスURL =====")
+    print(url)
 
+    # =========================
+    # ページ取得
+    # =========================
     driver.get(url)
 
-    time.sleep(3)
+    print("===== driver.get 完了 =====")
+
+    # 待機
+    time.sleep(8)
 
     # =========================
-    # テーブル取得
-    # table.stock_table.st_market
+    # 基本情報
     # =========================
-    rows = driver.find_elements(
+    print("\n===== 基本情報 =====")
+
+    print("TITLE:")
+    print(driver.title)
+
+    print("\nCURRENT URL:")
+    print(driver.current_url)
+
+    # =========================
+    # HTML取得
+    # =========================
+    html = driver.page_source
+
+    print("\n===== HTML情報 =====")
+
+    print("HTML文字数:")
+    print(len(html))
+
+    print("\nHTML先頭2000文字:")
+    print(html[:2000])
+
+    # =========================
+    # table確認
+    # =========================
+    print("\n===== TABLE確認 =====")
+
+    tables = driver.find_elements(By.TAG_NAME, "table")
+
+    print("table数:")
+    print(len(tables))
+
+    # stock_table確認
+    stock_tables = driver.find_elements(
         By.CSS_SELECTOR,
-        "table.stock_table.st_market tbody tr"
+        "table.stock_table"
     )
 
-    if not rows:
-        print("データが取得できませんでした")
-        exit()
+    print("\nstock_table数:")
+    print(len(stock_tables))
+
+    # st_market確認
+    market_tables = driver.find_elements(
+        By.CSS_SELECTOR,
+        "table.st_market"
+    )
+
+    print("\nst_market数:")
+    print(len(market_tables))
+
+    # 両方
+    full_tables = driver.find_elements(
+        By.CSS_SELECTOR,
+        "table.stock_table.st_market"
+    )
+
+    print("\nstock_table st_market数:")
+    print(len(full_tables))
 
     # =========================
-    # 1件のみ取得
+    # tr確認
     # =========================
-    row = rows[0]
+    print("\n===== TR確認 =====")
 
-    # -------------------------
-    # コード
-    # -------------------------
-    code = row.find_element(
-        By.CSS_SELECTOR,
-        "td:nth-child(1)"
-    ).text.strip()
+    trs = driver.find_elements(By.TAG_NAME, "tr")
 
-    # -------------------------
-    # 銘柄名
-    # -------------------------
-    name = row.find_element(
-        By.CSS_SELECTOR,
-        "td:nth-child(2) a"
-    ).text.strip()
-
-    # -------------------------
-    # 市場
-    # -------------------------
-    market = row.find_element(
-        By.CSS_SELECTOR,
-        "td:nth-child(3)"
-    ).text.strip()
-
-    # -------------------------
-    # 株価
-    # -------------------------
-    price = row.find_element(
-        By.CSS_SELECTOR,
-        "td:nth-child(4)"
-    ).text.strip()
-
-    # -------------------------
-    # 前日比
-    # -------------------------
-    prev_diff = row.find_element(
-        By.CSS_SELECTOR,
-        "td:nth-child(5)"
-    ).text.strip()
-
-    # -------------------------
-    # 売買代金
-    # -------------------------
-    trading_value = row.find_element(
-        By.CSS_SELECTOR,
-        "td:nth-child(6)"
-    ).text.strip()
-
-    # -------------------------
-    # PER
-    # -------------------------
-    per = row.find_element(
-        By.CSS_SELECTOR,
-        "td:nth-child(7)"
-    ).text.strip()
-
-    # -------------------------
-    # PBR
-    # -------------------------
-    pbr = row.find_element(
-        By.CSS_SELECTOR,
-        "td:nth-child(8)"
-    ).text.strip()
-
-    # -------------------------
-    # 利回り
-    # -------------------------
-    yield_ = row.find_element(
-        By.CSS_SELECTOR,
-        "td:nth-child(9)"
-    ).text.strip()
+    print("tr数:")
+    print(len(trs))
 
     # =========================
-    # 出力確認
+    # selector別確認
     # =========================
-    print(f"コード：{code}")
-    print(f"銘柄名：{name}")
-    print(f"市場：{market}")
-    print(f"株価：{price}")
-    print(f"前日比：{prev_diff}")
-    print(f"売買代金：{trading_value}")
-    print(f"PER：{per}")
-    print(f"PBR：{pbr}")
-    print(f"利回り：{yield_}")
+    print("\n===== selector確認 =====")
+
+    selectors = [
+        "table tr",
+        "tbody tr",
+        "table.stock_table tr",
+        "table.stock_table.st_market tr",
+        ".stock_table tr",
+        ".st_market tr"
+    ]
+
+    for selector in selectors:
+
+        try:
+            elems = driver.find_elements(
+                By.CSS_SELECTOR,
+                selector
+            )
+
+            print(f"{selector} => {len(elems)} 件")
+
+        except Exception as e:
+            print(f"{selector} => ERROR")
+            print(e)
 
     # =========================
-    # CSV出力部分（今回はコメントアウト）
+    # 最初のtr表示
     # =========================
-    """
-    with open("output.csv", "a", newline="", encoding="utf-8") as f:
-        writer = csv.writer(f)
-        writer.writerow([
-            code,
-            name,
-            market,
-            price,
-            prev_diff,
-            trading_value,
-            per,
-            pbr,
-            yield_
-        ])
-    """
+    print("\n===== 最初のTR =====")
+
+    if len(trs) > 0:
+
+        try:
+            print(trs[0].text)
+
+        except Exception as e:
+            print(e)
 
     # =========================
-    # merged結合部分（今回はコメントアウト）
+    # body確認
     # =========================
-    """
-    import pandas as pd
+    print("\n===== BODY確認 =====")
 
-    df1 = pd.read_csv("file1.csv")
-    df2 = pd.read_csv("file2.csv")
+    try:
+        body = driver.find_element(By.TAG_NAME, "body")
 
-    merged = pd.concat([df1, df2], ignore_index=True)
-    merged.to_csv("merged.csv", index=False, encoding="utf-8")
-    """
+        body_text = body.text
+
+        print(body_text[:3000])
+
+    except Exception as e:
+        print(e)
+
+    # =========================
+    # スクリーンショット
+    # =========================
+    screenshot_file = "debug.png"
+
+    driver.save_screenshot(screenshot_file)
+
+    print("\n===== スクリーンショット保存 =====")
+    print(screenshot_file)
+
+    print("\n===== 終了 =====")
 
 except Exception as e:
-    print(f"エラー: {e}")
+
+    print("\n===== エラー発生 =====")
+    print(type(e))
+    print(e)
 
 finally:
+
     if driver:
+
         driver.quit()
+
+        print("\n===== Chrome終了 =====")
