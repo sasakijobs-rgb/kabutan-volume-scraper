@@ -1,120 +1,72 @@
-import os
-import time
-import random
 import csv
-import re
+import time
 from datetime import datetime
 
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.chrome.options import Options
 
-BASE_URL = "https://s.kabutan.jp/warnings/trading_value_ranking/?market=all&page={}"
-MAX_PAGES = 300
 
-today = datetime.now().strftime("%Y%m%d")
+URL = "https://s.kabutan.jp/warnings/trading_value_ranking/?market=all&page=208"
+OUTPUT_FILE = f"output/page208_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv"
 
-os.makedirs("output", exist_ok=True)
 
-output_file = f"output/trading_value_ranking_{today}.csv"
+def is_valid_row(text):
+    if not text:
+        return False
+    if len(text) < 10:
+        return False
+    if "表示モード" in text:
+        return False
+    if "銘柄" in text:
+        return False
+    return True
 
-header = [
-    "日付","順位","コード","銘柄名","市場",
-    "株価","前日比(値)","前日比(率)",
-    "売買代金","PER","PBR","利回り"
-]
 
-options = Options()
-options.add_argument("--headless=new")
+def run():
+    print("===== START =====")
+    print(f"URL: {URL}")
 
-driver = webdriver.Chrome(options=options)
+    options = Options()
+    options.add_argument("--headless=new")
+    options.add_argument("--no-sandbox")
+    options.add_argument("--disable-dev-shm-usage")
 
-print("===== START =====")
+    driver = webdriver.Chrome(options=options)
 
-saved_total = 0
-rank = 1
-empty_page_count = 0
+    driver.get(URL)
+    time.sleep(3)
 
-with open(output_file, "w", newline="", encoding="utf-8-sig") as f:
-    writer = csv.writer(f)
-    writer.writerow(header)
+    rows = driver.find_elements(By.TAG_NAME, "tr")
 
-    for page in range(1, MAX_PAGES + 1):
+    print(f"[INFO] rows detected: {len(rows)}")
 
-        url = BASE_URL.format(page)
+    data = []
 
-        print(f"\n[PAGE] {page} / URL: {url}")
+    for r in rows:
+        txt = r.text.strip()
 
-        driver.get(url)
-        time.sleep(random.uniform(2, 4))
+        print("\n===== RAW ROW =====")
+        print(txt)
 
-        rows = driver.find_elements(By.CSS_SELECTOR, "tbody tr")
+        if is_valid_row(txt):
+            data.append(txt)
 
-        print(f"[INFO] rows detected: {len(rows)}")
+    driver.quit()
 
-        if len(rows) == 0:
-            empty_page_count += 1
-            print(f"[WARN] empty page streak: {empty_page_count}")
+    # CSV出力
+    with open(OUTPUT_FILE, "w", newline="", encoding="utf-8") as f:
+        writer = csv.writer(f)
+        writer.writerow(["page", "raw_data"])
 
-            if empty_page_count >= 3:
-                print("===== STOP: 連続空ページ =====")
-                break
-            continue
+        for row in data:
+            writer.writerow([208, row])
 
-        empty_page_count = 0
+    print("\n===== DONE =====")
+    print(f"saved rows: {len(data)}")
+    print(f"file: {OUTPUT_FILE}")
+    print("===== END =====")
 
-        page_saved = 0
 
-        for row in rows:
-
-            text = row.text.strip().replace("\n", " ")
-
-            # ノイズ除外
-            if not text:
-                continue
-            if "プレミアム" in text:
-                continue
-
-            m = re.search(r"\b\d{4}[A-Z]?\b", text)
-            if not m:
-                continue
-
-            code = m.group(0)
-
-            try:
-                parts = text.split()
-
-                # 最低限の安全チェック
-                if len(parts) < 6:
-                    continue
-
-                writer.writerow([
-                    today,
-                    rank,
-                    code,
-                    "",   # 銘柄名は簡略化（必要なら強化可）
-                    "",
-                    "",
-                    "",
-                    "",
-                    "",
-                    "",
-                    "",
-                    ""
-                ])
-
-                rank += 1
-                page_saved += 1
-                saved_total += 1
-
-            except Exception as e:
-                print("[ERROR]", e)
-                continue
-
-        print(f"[RESULT] page saved rows: {page_saved}")
-        print(f"[TOTAL] saved so far: {saved_total}")
-
-print("\n===== END =====")
-print(f"file: {output_file}")
-
-driver.quit()
+if __name__ == "__main__":
+    run()
