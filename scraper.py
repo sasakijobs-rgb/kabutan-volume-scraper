@@ -29,13 +29,11 @@ options = Options()
 # headless
 options.add_argument("--headless=new")
 
-# GitHub Actions対策
+# GitHub Actions 安定化
 options.add_argument("--no-sandbox")
 options.add_argument("--disable-dev-shm-usage")
 options.add_argument("--disable-gpu")
 options.add_argument("--disable-setuid-sandbox")
-
-# DevToolsActivePort対策
 options.add_argument("--remote-debugging-port=9222")
 
 # サイズ
@@ -114,7 +112,7 @@ try:
         print(i, line)
 
     # ==========================================
-    # データ数確認
+    # 項目数確認
     # ==========================================
     if len(lines) < 9:
         print("\n❌ 項目数不足")
@@ -131,26 +129,32 @@ try:
 
     market = lines[2].strip()
 
+    # 例:
     # 51,290 +1,520
     price_prev = lines[3].strip()
 
+    # 例:
     # +3.05%
     prev_rate = lines[4].strip()
 
+    # 例:
     # 1,588,513
     trading_value = lines[5].strip()
 
+    # 例:
     # ー倍
     per = lines[6].strip()
 
+    # 例:
     # 20.0倍
     pbr = lines[7].strip()
 
+    # 例:
     # ー%
     yield_value = lines[8].strip()
 
     # ==========================================
-    # 株価 / 前日比
+    # 株価 / 前日比 分離
     # ==========================================
     m = re.match(r"(.+?)\s+([+-].+)", price_prev)
 
@@ -169,7 +173,7 @@ try:
     trading_value = trading_value.replace(",", "")
 
     # ==========================================
-    # 表示
+    # Display
     # ==========================================
     print("\n==============================")
     print("📊 取得データチェック")
@@ -210,7 +214,7 @@ try:
     print(record)
 
     # ==========================================
-    # CSV保存（今はコメントアウト）
+    # CSV保存（必要時に有効化）
     # ==========================================
     #
     # os.makedirs("output", exist_ok=True)
@@ -239,4 +243,3 @@ finally:
     driver.quit()
 
     print("\n===== END =====")
-```
