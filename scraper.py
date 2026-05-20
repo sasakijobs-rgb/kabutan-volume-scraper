@@ -26,10 +26,9 @@ today = datetime.now().strftime("%Y%m%d")
 # ==========================================
 options = Options()
 
-# headless
 options.add_argument("--headless=new")
 
-# GitHub Actions 安定化
+# GitHub Actions対策
 options.add_argument("--no-sandbox")
 options.add_argument("--disable-dev-shm-usage")
 options.add_argument("--disable-gpu")
@@ -48,7 +47,7 @@ options.add_argument(
     "Chrome/124.0.0.0 Safari/537.36"
 )
 
-# Chromium場所
+# Chromium
 options.binary_location = "/usr/bin/chromium-browser"
 
 # ==========================================
@@ -61,7 +60,7 @@ driver = webdriver.Chrome(options=options)
 try:
 
     # ==========================================
-    # ページアクセス
+    # access
     # ==========================================
     driver.get(URL)
 
@@ -78,7 +77,7 @@ try:
     print(driver.title)
 
     # ==========================================
-    # 行取得
+    # row取得
     # ==========================================
     rows = driver.find_elements(By.CSS_SELECTOR, "tbody tr")
 
@@ -86,13 +85,12 @@ try:
     print(len(rows))
 
     if len(rows) == 0:
-        print("❌ 行取得失敗")
+        print("❌ row取得失敗")
         driver.save_screenshot("debug.png")
-        driver.quit()
         exit()
 
     # ==========================================
-    # 1件目取得
+    # 1件
     # ==========================================
     rank = 1
 
@@ -102,7 +100,7 @@ try:
     print(row.text)
 
     # ==========================================
-    # 改行分割
+    # lines
     # ==========================================
     lines = row.text.split("\n")
 
@@ -112,16 +110,7 @@ try:
         print(i, line)
 
     # ==========================================
-    # 項目数確認
-    # ==========================================
-    if len(lines) < 9:
-        print("\n❌ 項目数不足")
-        driver.save_screenshot("debug.png")
-        driver.quit()
-        exit()
-
-    # ==========================================
-    # パース
+    # 基本項目
     # ==========================================
     name = lines[0].strip()
 
@@ -129,32 +118,17 @@ try:
 
     market = lines[2].strip()
 
-    # 例:
     # 51,290 +1,520
     price_prev = lines[3].strip()
 
-    # 例:
-    # +3.05%
-    prev_rate = lines[4].strip()
+    # +3.05% 1,588,513 ー倍 20.0倍 ー%
+    remain = lines[4].strip()
 
-    # 例:
-    # 1,588,513
-    trading_value = lines[5].strip()
-
-    # 例:
-    # ー倍
-    per = lines[6].strip()
-
-    # 例:
-    # 20.0倍
-    pbr = lines[7].strip()
-
-    # 例:
-    # ー%
-    yield_value = lines[8].strip()
+    print("\n===== REMAIN =====")
+    print(remain)
 
     # ==========================================
-    # 株価 / 前日比 分離
+    # 株価 / 前日比
     # ==========================================
     m = re.match(r"(.+?)\s+([+-].+)", price_prev)
 
@@ -166,10 +140,39 @@ try:
         prev_value = ""
 
     # ==========================================
+    # 残り解析
+    # ==========================================
+    remain_parts = remain.split()
+
+    print("\n===== REMAIN PARTS =====")
+
+    for i, v in enumerate(remain_parts):
+        print(i, v)
+
+    # 想定:
+    # 0 +3.05%
+    # 1 1,588,513
+    # 2 ー倍
+    # 3 20.0倍
+    # 4 ー%
+
+    prev_rate = remain_parts[0] if len(remain_parts) > 0 else ""
+
+    trading_value = remain_parts[1] if len(remain_parts) > 1 else ""
+
+    per = remain_parts[2] if len(remain_parts) > 2 else ""
+
+    pbr = remain_parts[3] if len(remain_parts) > 3 else ""
+
+    yield_value = remain_parts[4] if len(remain_parts) > 4 else ""
+
+    # ==========================================
     # カンマ除去
     # ==========================================
     price = price.replace(",", "")
+
     prev_value = prev_value.replace(",", "")
+
     trading_value = trading_value.replace(",", "")
 
     # ==========================================
@@ -193,7 +196,7 @@ try:
     print(f"11 利回り      : {yield_value}")
 
     # ==========================================
-    # CSVレコード
+    # CSV RECORD
     # ==========================================
     record = [
         today,
