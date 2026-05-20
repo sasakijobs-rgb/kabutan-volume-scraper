@@ -1,3 +1,4 @@
+```python
 import os
 import re
 import time
@@ -9,28 +10,37 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.chrome.options import Options
 
 # ==========================================
-# 設定
+# URL
 # ==========================================
 URL = "https://s.kabutan.jp/warnings/trading_value_ranking/?market=all&page=1"
 
-TODAY = datetime.now().strftime("%Y%m%d")
-
 print("===== START =====")
 print("URL:", URL)
+
+# ==========================================
+# 日付
+# ==========================================
+today = datetime.now().strftime("%Y%m%d")
 
 # ==========================================
 # Chrome設定
 # ==========================================
 options = Options()
 
-# GitHub Actions用
+# headless
 options.add_argument("--headless=new")
+
+# GitHub Actions対策
 options.add_argument("--no-sandbox")
 options.add_argument("--disable-dev-shm-usage")
-
-# 軽量化
 options.add_argument("--disable-gpu")
-options.add_argument("--window-size=1280,2000")
+options.add_argument("--disable-setuid-sandbox")
+
+# DevToolsActivePort対策
+options.add_argument("--remote-debugging-port=9222")
+
+# サイズ
+options.add_argument("--window-size=1400,2200")
 
 # UserAgent
 options.add_argument(
@@ -41,7 +51,7 @@ options.add_argument(
     "Chrome/124.0.0.0 Safari/537.36"
 )
 
-# GitHub ActionsのChromeパス
+# Chromium場所
 options.binary_location = "/usr/bin/chromium-browser"
 
 # ==========================================
@@ -54,7 +64,7 @@ driver = webdriver.Chrome(options=options)
 try:
 
     # ==========================================
-    # アクセス
+    # ページアクセス
     # ==========================================
     driver.get(URL)
 
@@ -79,12 +89,13 @@ try:
     print(len(rows))
 
     if len(rows) == 0:
-        print("行取得失敗")
+        print("❌ 行取得失敗")
+        driver.save_screenshot("debug.png")
         driver.quit()
         exit()
 
     # ==========================================
-    # 1件目
+    # 1件目取得
     # ==========================================
     rank = 1
 
@@ -104,10 +115,10 @@ try:
         print(i, line)
 
     # ==========================================
-    # 最低件数チェック
+    # データ数確認
     # ==========================================
     if len(lines) < 9:
-        print("\n❌ 想定より項目数が少ない")
+        print("\n❌ 項目数不足")
         driver.save_screenshot("debug.png")
         driver.quit()
         exit()
@@ -140,7 +151,7 @@ try:
     yield_value = lines[8].strip()
 
     # ==========================================
-    # 株価 / 前日比(値)
+    # 株価 / 前日比
     # ==========================================
     m = re.match(r"(.+?)\s+([+-].+)", price_prev)
 
@@ -165,7 +176,7 @@ try:
     print("📊 取得データチェック")
     print("==============================")
 
-    print(f"0 日付        : {TODAY}")
+    print(f"0 日付        : {today}")
     print(f"1 順位        : {rank}")
     print(f"2 コード      : {code}")
     print(f"3 銘柄名      : {name}")
@@ -179,10 +190,10 @@ try:
     print(f"11 利回り      : {yield_value}")
 
     # ==========================================
-    # CSV用データ
+    # CSVレコード
     # ==========================================
     record = [
-        TODAY,
+        today,
         rank,
         code,
         name,
@@ -197,16 +208,15 @@ try:
     ]
 
     print("\n===== CSV RECORD =====")
-
     print(record)
 
     # ==========================================
-    # 出力部分（あとで有効化）
+    # CSV保存（今はコメントアウト）
     # ==========================================
     #
     # os.makedirs("output", exist_ok=True)
     #
-    # csv_path = f"output/trading_value_{TODAY}.csv"
+    # csv_path = f"output/trading_value_{today}.csv"
     #
     # with open(csv_path, "a", encoding="utf-8-sig") as f:
     #     f.write(",".join(map(str, record)) + "\n")
@@ -230,3 +240,4 @@ finally:
     driver.quit()
 
     print("\n===== END =====")
+```
