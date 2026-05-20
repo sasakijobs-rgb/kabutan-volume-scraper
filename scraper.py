@@ -8,7 +8,7 @@ from selenium.webdriver.chrome.options import Options
 # =========================
 # URL
 # =========================
-URL = "https://kabutan.jp/warning/trading_value_ranking?market=0&capitalization=-1&dispmode=normal&page=1"
+URL = "https://s.kabutan.jp/warnings/trading_value_ranking?market=0&capitalization=-1&dispmode=normal&page=1"
 
 print("===== START =====")
 print("URL:", URL)
