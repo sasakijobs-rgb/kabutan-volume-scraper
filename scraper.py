@@ -1,16 +1,16 @@
+import re
 import csv
-import os
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.chrome.options import Options
 import time
 
-# =========================
-# 設定
-# =========================
 URL = "https://s.kabutan.jp/warnings/trading_value_ranking/?market=all&page=208"
 DATE = "20260520"
-OUTPUT_FILE = "trading_value_ranking_20260520.csv"
+OUTPUT = "trading_value_ranking_20260520.csv"
+
+MARKET_PATTERN = r"^(東S|東P|名M|東E|東G)$"
+CODE_PATTERN = r"^[0-9A-Z]{4,5}$"
 
 HEADER = [
     "日付","No","コード","銘柄名","市場",
@@ -18,47 +18,11 @@ HEADER = [
     "売買代金","PER","PBR","利回り"
 ]
 
-# =========================
-# CSV初期化
-# =========================
 def init_csv():
-    if not os.path.exists(OUTPUT_FILE):
-        with open(OUTPUT_FILE, "w", newline="", encoding="utf-8-sig") as f:
-            writer = csv.writer(f)
-            writer.writerow(HEADER)
-
-def append_rows(rows):
-    with open(OUTPUT_FILE, "a", newline="", encoding="utf-8-sig") as f:
+    with open(OUTPUT, "w", newline="", encoding="utf-8-sig") as f:
         writer = csv.writer(f)
-        writer.writerows(rows)
+        writer.writerow(HEADER)
 
-# =========================
-# 208ページ専用パース
-# =========================
-def parse_raw(raw, no):
-    parts = raw.split()
-
-    if len(parts) < 9:
-        return None
-
-    return [
-        DATE,
-        no,
-        parts[1],  # コード
-        parts[0],  # 銘柄名
-        parts[2],  # 市場
-        parts[3],  # 株価
-        parts[4],  # 前日比
-        parts[5],  # 前日比%
-        parts[6],  # 売買代金
-        parts[7],  # PER
-        parts[8],  # PBR
-        parts[9] if len(parts) > 9 else ""
-    ]
-
-# =========================
-# Chrome設定（軽量・安定）
-# =========================
 def create_driver():
     options = Options()
     options.add_argument("--headless=new")
@@ -66,69 +30,94 @@ def create_driver():
     options.add_argument("--disable-dev-shm-usage")
     options.add_argument("--disable-gpu")
     options.add_argument("--window-size=1280,800")
-
     return webdriver.Chrome(options=options)
 
 # =========================
-# 208ページ取得（raw抽出）
+# データ抽出（ここが核心）
 # =========================
-def fetch_page208(driver):
+def extract_rows(driver):
     driver.get(URL)
     time.sleep(3)
 
-    raw_list = []
+    text = driver.find_element(By.TAG_NAME, "body").text
+    lines = [l.strip() for l in text.split("\n") if l.strip()]
 
-    # 最終ページはテーブル構造が崩れるので td を使わず text 取得
-    rows = driver.find_elements(By.CSS_SELECTOR, "tr")
+    rows = []
 
-    for r in rows:
-        txt = r.text.strip()
+    i = 0
+    while i < len(lines) - 10:
+        line = lines[i]
 
-        # ヘッダー・空行除外
-        if not txt:
-            continue
-        if "銘柄" in txt and "市場" in txt:
-            continue
-        if "前へ" in txt or "次へ" in txt:
-            continue
-        if "件 /" in txt:
+        # 銘柄名っぽい行スキップ
+        if "件 /" in line or "前へ" in line or "次へ" in line:
+            i += 1
             continue
 
-        # それっぽいデータだけ残す（コードが数字 or 4桁以上）
-        if len(txt.split()) < 6:
-            continue
+        # コード判定
+        if re.match(CODE_PATTERN, line):
+            code = line
 
-        raw_list.append(txt)
+            # 次行が市場コードか確認
+            if i + 1 < len(lines) and re.match(MARKET_PATTERN, lines[i + 1]):
 
-    return raw_list
+                market = lines[i + 1]
 
-# =========================
-# メイン処理
-# =========================
+                # 銘柄名はその1つ前
+                name = lines[i - 1] if i > 0 else ""
+
+                # 数値群
+                # ここは固定順で吸収
+                try:
+                    price_line = lines[i + 2].split()
+                    price = price_line[0]
+                    diff = price_line[1] if len(price_line) > 1 else ""
+
+                    diff_pct = lines[i + 3]
+                    volume = lines[i + 4]
+                    per = lines[i + 5]
+                    pbr = lines[i + 6]
+                    yield_ = lines[i + 7]
+
+                    rows.append([
+                        DATE,
+                        len(rows) + 4141,
+                        code,
+                        name,
+                        market,
+                        price,
+                        diff,
+                        diff_pct,
+                        volume,
+                        per,
+                        pbr,
+                        yield_
+                    ])
+
+                except:
+                    pass
+
+                i += 8
+                continue
+
+        i += 1
+
+    return rows
+
 def main():
-    print("===== START (208 PAGE ONLY) =====")
+    print("===== START =====")
 
     init_csv()
 
     driver = create_driver()
 
     try:
-        raw_list = fetch_page208(driver)
+        rows = extract_rows(driver)
 
-        print(f"[INFO] raw rows: {len(raw_list)}")
+        print("[RESULT] rows:", len(rows))
 
-        rows = []
-        start_no = 4141  # 最終ページ想定
-
-        for i, raw in enumerate(raw_list):
-            parsed = parse_raw(raw, start_no + i)
-            if parsed:
-                rows.append(parsed)
-
-        append_rows(rows)
-
-        print(f"[DONE] saved rows: {len(rows)}")
-        print(f"[FILE] {OUTPUT_FILE}")
+        with open(OUTPUT, "a", newline="", encoding="utf-8-sig") as f:
+            writer = csv.writer(f)
+            writer.writerows(rows)
 
     finally:
         driver.quit()
