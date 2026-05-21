@@ -46,13 +46,17 @@ def parse_page(page, start_no, today, session):
         if not text:
             continue
 
-        # S/K除去
+        # =========================
+        # ノイズ除去（S/K）
+        # =========================
         text = text.replace(" S ", " ")
         text = text.replace(" K ", " ")
 
         parts = text.split()
 
-        # % / 倍結合
+        # =========================
+        # % / 倍 結合
+        # =========================
         merged = []
         for p in parts:
             if p in ["%", "倍"]:
@@ -63,6 +67,9 @@ def parse_page(page, start_no, today, session):
 
         parts = merged
 
+        # =========================
+        # 行バリデーション
+        # =========================
         if len(parts) < 10:
             continue
 
@@ -76,6 +83,10 @@ def parse_page(page, start_no, today, session):
         per = parts[7]
         pbr = parts[8]
         yld = parts[9]
+
+        # 株価チェック（崩れ防止）
+        if not stock_price.replace(",", "").replace(".", "").replace("-", "").isdigit():
+            continue
 
         rank_no = start_no + len(output)
 
@@ -130,7 +141,9 @@ def main():
     total_count = None
     fetched_count = 0
 
-    while True:
+    MAX_PAGES = 300  # ★安全上限
+
+    while page <= MAX_PAGES:
 
         data, html = parse_page(page, start_no, today, session)
 
@@ -138,15 +151,17 @@ def main():
             break
 
         all_data.extend(data)
-
         fetched_count = len(all_data)
 
-        # 件数取得（最初だけ）
+        # =========================
+        # 総件数取得（初回のみ）
+        # =========================
         if total_count is None:
 
-            match_text = BeautifulSoup(html, "html.parser").get_text(" ", strip=True)
+            soup = BeautifulSoup(html, "html.parser")
+            text = soup.get_text(" ", strip=True)
 
-            total_count = get_total_count(match_text)
+            total_count = get_total_count(text)
 
             log(f"総件数: {total_count}")
 
@@ -156,11 +171,15 @@ def main():
         start_no += len(data)
         page += 1
 
-        # ★最終ページ判定
+        # =========================
+        # 終了条件（重要）
+        # =========================
         if total_count is not None and fetched_count >= total_count:
             break
 
+    # =========================
     # CSV出力
+    # =========================
     with open(csv_file, "w", newline="", encoding="utf-8-sig") as f:
 
         writer = csv.writer(f)
