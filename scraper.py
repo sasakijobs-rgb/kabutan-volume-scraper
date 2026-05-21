@@ -15,9 +15,6 @@ def main(page=1):
     JST = timezone(timedelta(hours=9))
     start_time = datetime.datetime.now(JST)
 
-    # =========================
-    # URL（指定ページ対応）
-    # =========================
     url = (
         "https://s.kabutan.jp/"
         "warnings/trading_value_ranking/"
@@ -56,22 +53,26 @@ def main(page=1):
 
         rows = soup.select("table tbody tr")
 
-        log(f"[INFO] rows: {len(rows)}")
-
         output = []
 
-        start_no = 1 + (page - 1) * 20  # 1ページ20件想定
+        start_no = 1 + (page - 1) * 20
 
-        for idx, row in enumerate(rows):
+        for row in rows:
 
             text = row.get_text(" ", strip=True)
 
             if not text:
                 continue
 
+            # =========================
+            # ★重要：ノイズ除去
+            # =========================
+            text = text.replace(" S ", " ")
+            text = text.replace(" K ", " ")
+
             parts = text.split()
 
-            # % / 倍 を結合
+            # % / 倍 結合
             merged = []
             for p in parts:
                 if p in ["%", "倍"]:
@@ -82,7 +83,7 @@ def main(page=1):
 
             parts = merged
 
-            # 見出し行除外
+            # 見出し・壊れ行除外
             if len(parts) < 10:
                 continue
 
@@ -96,6 +97,10 @@ def main(page=1):
             per = parts[7]
             pbr = parts[8]
             yld = parts[9]
+
+            # ★追加安全チェック（ズレ防止）
+            if not stock_price.replace(",", "").replace(".", "").replace("-", "").isdigit():
+                continue
 
             rank_no = start_no + len(output)
 
@@ -113,8 +118,6 @@ def main(page=1):
                 pbr,
                 yld
             ])
-
-            log(f"[OK] {rank_no} {name}")
 
         # =========================
         # CSV出力
@@ -143,13 +146,10 @@ def main(page=1):
         end_time = datetime.datetime.now(JST)
         duration = end_time - start_time
 
-        msg = (
+        log(
             f"【終了】{end_time.strftime('%H:%M')}  "
             f"作業時間：合計 {duration.seconds // 60}分"
         )
-
-        log(msg)
-        log(msg)
 
         log(f"[FILE] {csv_file}")
         log(f"[DONE] {len(output)} rows")
@@ -167,5 +167,4 @@ def main(page=1):
 
 if __name__ == "__main__":
 
-    # ★ここでページ指定
     main(page=1)
