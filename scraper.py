@@ -78,13 +78,13 @@ def run_cleanup():
 
 
 # =========================
-# 3. scraper実行
+# 3. data2csv実行
 # =========================
 def run_scraper():
 
     log("[STEP] scraper start")
 
-    subprocess.run(["python", "scraper.py"], check=True)
+    subprocess.run(["python", "data2csv.py"], check=True)
 
 
 # =========================
