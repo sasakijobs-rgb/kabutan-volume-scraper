@@ -3,72 +3,71 @@ from bs4 import BeautifulSoup
 import csv
 import datetime
 import os
-import re
 from datetime import timedelta, timezone
+
+
+def log(msg):
+    print(msg)
 
 
 def main():
 
-    print("===== START =====")
-
-    # JSTで日付生成（重要）
     JST = timezone(timedelta(hours=9))
-    today = datetime.datetime.now(JST).strftime("%Y%m%d")
 
-    # 出力フォルダ作成
-    os.makedirs("output", exist_ok=True)
+    start_time = datetime.datetime.now(JST)
 
-    csv_file = f"output/trading_value_ranking_{today}.csv"
-
+    # =========================
+    # START DISPLAY
+    # =========================
     url = (
         "https://s.kabutan.jp/"
         "warnings/trading_value_ranking/"
-        "?market=all&page=207"
+        "?market=all&page=1"
     )
 
-    headers = {
-        "User-Agent": (
-            "Mozilla/5.0 "
-            "(Windows NT 10.0; Win64; x64) "
-            "AppleWebKit/537.36 "
-            "(KHTML, like Gecko) "
-            "Chrome/125.0 Safari/537.36"
-        )
-    }
+    log("【開始】" + start_time.strftime("%H:%M"))
+    log("")
+    log(f"20件 / 4123件中 {start_time.strftime('%H:%M')}")
+    log(url)
+    log("")
 
-    response = requests.get(url, headers=headers, timeout=30)
-    response.raise_for_status()
+    try:
 
-    print(f"[INFO] status: {response.status_code}")
+        today = start_time.strftime("%Y%m%d")
 
-    soup = BeautifulSoup(response.text, "html.parser")
+        os.makedirs("output", exist_ok=True)
 
-    rows = soup.select("table tbody tr")
+        csv_file = f"output/trading_value_ranking_{today}.csv"
 
-    print(f"[INFO] raw rows: {len(rows)}")
+        headers = {
+            "User-Agent": (
+                "Mozilla/5.0 "
+                "(Windows NT 10.0; Win64; x64) "
+                "AppleWebKit/537.36 "
+                "(KHTML, like Gecko) "
+                "Chrome/125.0 Safari/537.36"
+            )
+        }
 
-    output = []
+        response = requests.get(url, headers=headers, timeout=30)
+        response.raise_for_status()
 
-    start_no = 4141
+        soup = BeautifulSoup(response.text, "html.parser")
 
-    for idx, row in enumerate(rows):
+        rows = soup.select("table tbody tr")
 
-        try:
+        output = []
+        start_no = 4141
+
+        for idx, row in enumerate(rows):
+
             text = row.get_text(" ", strip=True)
 
             if not text:
                 continue
 
-            print(f"[ROW {idx}] {text}")
-
-            # 市場区分説明などを除外
-            if "東証" in text or "名証" in text or "札証" in text or "福証" in text:
-                print(f"[SKIP] row {idx} market label")
-                continue
-
             parts = text.split()
 
-            # % と 倍 を結合
             merged = []
             for p in parts:
                 if p in ["%", "倍"]:
@@ -79,12 +78,9 @@ def main():
 
             parts = merged
 
-            # 最低チェック
             if len(parts) < 10:
-                print(f"[SKIP] row {idx} parts不足: {parts}")
                 continue
 
-            # データ分解
             name = parts[0]
             code = parts[1]
             market = parts[2]
@@ -113,37 +109,57 @@ def main():
                 yld
             ])
 
-            print(f"[OK] {rank_no} {name}")
+        # =========================
+        # CSV OUTPUT
+        # =========================
+        with open(csv_file, "w", newline="", encoding="utf-8-sig") as f:
 
-        except Exception as e:
-            print(f"[ERROR] row {idx}: {e}")
-            continue
+            writer = csv.writer(f)
 
-    # CSV出力
-    with open(csv_file, "w", newline="", encoding="utf-8-sig") as f:
+            writer.writerow([
+                "日付",
+                "順位",
+                "銘柄名",
+                "コード",
+                "市場",
+                "株価",
+                "前日差",
+                "騰落率",
+                "出来高",
+                "PER",
+                "PBR",
+                "配当利回り"
+            ])
 
-        writer = csv.writer(f)
+            writer.writerows(output)
 
-        writer.writerow([
-            "日付",
-            "順位",
-            "銘柄名",
-            "コード",
-            "市場",
-            "株価(百万円)",
-            "前日比",
-            "前日比(%)",
-            "売買代金",
-            "PER",
-            "PBR",
-            "利回り"
-        ])
+        end_time = datetime.datetime.now(JST)
 
-        writer.writerows(output)
+        duration = end_time - start_time
 
-    print(f"[DONE] saved rows: {len(output)}")
-    print(f"[FILE] {csv_file}")
-    print("===== END =====")
+        # =========================
+        # END DISPLAY（正常）
+        # =========================
+        msg = (
+            f"【終了】{end_time.strftime('%H:%M')}  "
+            f"作業時間：合計 {duration.seconds // 60}分"
+        )
+
+        log(msg)
+        log(msg)  # ログにも同じ内容
+
+        log(f"[FILE] {csv_file}")
+        log(f"[DONE] {len(output)} rows")
+
+    except Exception as e:
+
+        end_time = datetime.datetime.now(JST)
+
+        log("【エラー終了】" + end_time.strftime("%H:%M"))
+        log(f"エラー内容：{e}")
+        log("作業は途中で停止しました")
+
+        raise
 
 
 if __name__ == "__main__":
