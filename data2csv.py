@@ -11,17 +11,19 @@ def log(msg):
     print(msg)
 
 
+# =========================
+# 総件数取得
+# =========================
 def get_total_count(text):
-    """
-    例:
-    20件 / 4123件中
-    """
     match = re.search(r"/\s*([0-9,]+)件中", text)
     if match:
         return int(match.group(1).replace(",", ""))
     return None
 
 
+# =========================
+# ページ解析（修正版）
+# =========================
 def parse_page(page, start_no, today, session):
 
     url = (
@@ -39,142 +41,136 @@ def parse_page(page, start_no, today, session):
 
     output = []
 
-    for row in rows:
+    for idx, row in enumerate(rows):
 
-        text = row.get_text(" ", strip=True)
+        try:
+            # =========================
+            # 銘柄（th構造）
+            # =========================
+            th = row.find("th")
+            if not th:
+                continue
 
-        if not text:
-            continue
+            name_tag = th.find("p")
+            div_tag = th.find("div")
 
-        # =========================
-        # ノイズ除去（S/K）
-        # =========================
-        text = text.replace(" S ", " ")
-        text = text.replace(" K ", " ")
+            if not name_tag or not div_tag:
+                continue
 
-        parts = text.split()
+            name = name_tag.get_text(strip=True)
 
-        # =========================
-        # % / 倍 結合
-        # =========================
-        merged = []
-        for p in parts:
-            if p in ["%", "倍"]:
-                if merged:
-                    merged[-1] += p
+            parts = div_tag.get_text(" ", strip=True).split()
+
+            if len(parts) >= 2:
+                code = parts[0]
+                market = parts[1]
             else:
-                merged.append(p)
+                code = parts[0] if parts else ""
+                market = ""
 
-        parts = merged
+            # =========================
+            # 数値（td構造）
+            # =========================
+            tds = row.find_all("td")
 
-        # =========================
-        # 行バリデーション
-        # =========================
-        if len(parts) < 10:
+            if len(tds) < 7:
+                log(f"[SKIP] page {page} row {idx} td不足")
+                continue
+
+            stock_price = tds[0].get_text(strip=True)
+            diff_price = tds[1].get_text(" ", strip=True)
+            trade_value = tds[2].get_text(strip=True)
+            per = tds[4].get_text(strip=True)
+            pbr = tds[5].get_text(strip=True)
+            yld = tds[6].get_text(strip=True)
+
+            # =========================
+            # S / K / プレミアム対策
+            # =========================
+            diff_price = diff_price.replace("S", "").replace("K", "").strip()
+
+            # =========================
+            # rank
+            # =========================
+            rank_no = start_no + len(output)
+
+            output.append([
+                today,
+                rank_no,
+                name,
+                code,
+                market,
+                stock_price,
+                diff_price,
+                "",  # 騰落率（必要なら後で追加）
+                trade_value,
+                per,
+                pbr,
+                yld
+            ])
+
+        except Exception as e:
+            log(f"[ERROR] page {page} row {idx}: {e}")
             continue
-
-        name = parts[0]
-        code = parts[1]
-        market = parts[2]
-        stock_price = parts[3]
-        diff_price = parts[4]
-        diff_percent = parts[5]
-        trade_value = parts[6]
-        per = parts[7]
-        pbr = parts[8]
-        yld = parts[9]
-
-        # 株価チェック（崩れ防止）
-        if not stock_price.replace(",", "").replace(".", "").replace("-", "").isdigit():
-            continue
-
-        rank_no = start_no + len(output)
-
-        output.append([
-            today,
-            rank_no,
-            name,
-            code,
-            market,
-            stock_price,
-            diff_price,
-            diff_percent,
-            trade_value,
-            per,
-            pbr,
-            yld
-        ])
 
     return output, response.text
 
 
+# =========================
+# メイン
+# =========================
 def main():
 
     JST = timezone(timedelta(hours=9))
     start_time = datetime.datetime.now(JST)
-
     today = start_time.strftime("%Y%m%d")
 
     os.makedirs("output", exist_ok=True)
 
     csv_file = f"output/trading_value_ranking_{today}.csv"
 
-    log(f"【開始】{start_time.strftime('%H:%M')}")
+    log("===== START =====")
 
     session = requests.Session()
-
     session.headers.update({
         "User-Agent": (
-            "Mozilla/5.0 "
-            "(Windows NT 10.0; Win64; x64) "
-            "AppleWebKit/537.36 "
-            "(KHTML, like Gecko) "
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+            "AppleWebKit/537.36 (KHTML, like Gecko) "
             "Chrome/125.0 Safari/537.36"
         )
     })
 
     all_data = []
-
     page = 1
     start_no = 1
-
     total_count = None
-    fetched_count = 0
 
-    MAX_PAGES = 300  # ★安全上限
+    MAX_PAGE = 300
 
-    while page <= MAX_PAGES:
+    while page <= MAX_PAGE:
 
         data, html = parse_page(page, start_no, today, session)
 
         if not data:
+            log(f"[STOP] page {page} empty")
             break
 
         all_data.extend(data)
-        fetched_count = len(all_data)
 
-        # =========================
-        # 総件数取得（初回のみ）
-        # =========================
+        # 総件数取得
         if total_count is None:
-
             soup = BeautifulSoup(html, "html.parser")
             text = soup.get_text(" ", strip=True)
-
             total_count = get_total_count(text)
+            log(f"[TOTAL] {total_count}")
 
-            log(f"総件数: {total_count}")
+        log(f"[PAGE] {page} / COUNT {len(all_data)}")
 
-        log(f"page {page} done / {fetched_count}件")
-
-        # 次ページ準備
         start_no += len(data)
         page += 1
 
-        # =========================
-        # 終了条件（重要）
-        # =========================
-        if total_count is not None and fetched_count >= total_count:
+        # 終了条件
+        if total_count and len(all_data) >= total_count:
             break
 
     # =========================
@@ -193,25 +189,17 @@ def main():
             "株価",
             "前日差",
             "騰落率",
-            "出来高",
+            "売買代金",
             "PER",
             "PBR",
-            "配当利回り"
+            "利回り"
         ])
 
         writer.writerows(all_data)
 
-    end_time = datetime.datetime.now(JST)
-
-    duration = end_time - start_time
-
-    log(
-        f"【終了】{end_time.strftime('%H:%M')} "
-        f"作業時間：合計 {duration.seconds // 60}分"
-    )
-
-    log(f"[FILE] {csv_file}")
     log(f"[DONE] {len(all_data)} rows")
+    log(f"[FILE] {csv_file}")
+    log("===== END =====")
 
 
 if __name__ == "__main__":
