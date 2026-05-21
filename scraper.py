@@ -8,23 +8,32 @@ from selenium.webdriver.support import expected_conditions as EC
 
 import csv
 import datetime
+import time
 
 
 def main():
-    print("===== START (207 PAGE ONLY) =====")
 
-    # 日付
+    print("===== START =====")
+
     today = datetime.datetime.now().strftime("%Y%m%d")
 
-    # Chrome 設定
     chrome_options = Options()
+
     chrome_options.add_argument("--headless=new")
     chrome_options.add_argument("--no-sandbox")
     chrome_options.add_argument("--disable-dev-shm-usage")
     chrome_options.add_argument("--disable-gpu")
     chrome_options.add_argument("--window-size=1920,1080")
 
-    # Selenium Manager を使用
+    # User-Agent追加（重要）
+    chrome_options.add_argument(
+        "--user-agent=Mozilla/5.0 "
+        "(Windows NT 10.0; Win64; x64) "
+        "AppleWebKit/537.36 "
+        "(KHTML, like Gecko) "
+        "Chrome/125.0 Safari/537.36"
+    )
+
     driver = webdriver.Chrome(options=chrome_options)
 
     url = (
@@ -35,34 +44,44 @@ def main():
 
     driver.get(url)
 
-    # テーブル読み込み待機
-    WebDriverWait(driver, 10).until(
+    # 読み込み待機
+    WebDriverWait(driver, 15).until(
         EC.presence_of_element_located(
-            (By.CSS_SELECTOR, "table tbody tr")
+            (By.TAG_NAME, "table")
         )
     )
 
-    # 行取得
-    rows = driver.find_elements(By.CSS_SELECTOR, "table tbody tr")
+    # 少し待つ（Kabutan対策）
+    time.sleep(3)
+
+    rows = driver.find_elements(
+        By.CSS_SELECTOR,
+        "table tbody tr"
+    )
 
     print(f"[INFO] raw rows: {len(rows)}")
 
     output = []
 
-    # 207ページ開始順位
     start_no = 4141
 
     for idx, row in enumerate(rows):
 
         try:
-            # th がない行をスキップ
+
+            # 銘柄リンク有無で判定
+            stock_link = row.find_elements(
+                By.CSS_SELECTOR,
+                'a[href*="/stock/?code="]'
+            )
+
+            if not stock_link:
+                print(f"[SKIP] row {idx} no stock link")
+                continue
+
+            # th
             th = row.find_element(By.TAG_NAME, "th")
 
-        except Exception:
-            print(f"[SKIP] row {idx} has no th")
-            continue
-
-        try:
             # 銘柄名
             name = (
                 th.find_element(By.TAG_NAME, "p")
@@ -70,28 +89,28 @@ def main():
                 .strip()
             )
 
-            # コード + 市場
-            code_market = (
-                th.find_element(By.CSS_SELECTOR, "div")
+            # コード・市場
+            div_text = (
+                th.find_element(By.TAG_NAME, "div")
                 .text
                 .strip()
-                .split()
             )
 
-            if len(code_market) >= 2:
-                code = code_market[0]
-                market = code_market[1]
-            elif len(code_market) == 1:
-                code = code_market[0]
+            parts = div_text.split()
+
+            if len(parts) >= 2:
+                code = parts[0]
+                market = parts[1]
+            elif len(parts) == 1:
+                code = parts[0]
                 market = ""
             else:
                 code = ""
                 market = ""
 
-            # td 群
+            # td
             tds = row.find_elements(By.TAG_NAME, "td")
 
-            # td不足行をスキップ
             if len(tds) < 7:
                 print(f"[SKIP] row {idx} td不足")
                 continue
@@ -115,7 +134,6 @@ def main():
             pbr = tds[5].text.strip()
             yld = tds[6].text.strip()
 
-            # raw_data
             raw_data = (
                 f"{name} "
                 f"{code} "
@@ -128,7 +146,6 @@ def main():
                 f"{yld}"
             )
 
-            # 順位は output 数基準
             rank_no = start_no + len(output)
 
             output.append([
@@ -140,17 +157,20 @@ def main():
             print(f"[OK] {rank_no} {name}")
 
         except Exception as e:
+
             print(f"[ERROR] row {idx}: {e}")
+
             continue
 
     driver.quit()
 
-    # CSV保存
-    csv_file = f"trading_value_ranking_{today}.csv"
+    csv_file = (
+        f"trading_value_ranking_{today}.csv"
+    )
 
     with open(
         csv_file,
-        mode="w",
+        "w",
         newline="",
         encoding="utf-8"
     ) as f:
@@ -167,6 +187,7 @@ def main():
 
     print(f"[DONE] saved rows: {len(output)}")
     print(f"[FILE] {csv_file}")
+
     print("===== END =====")
 
 
