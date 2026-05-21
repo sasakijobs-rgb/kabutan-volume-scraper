@@ -1,17 +1,24 @@
-# scraper.py
-
 import requests
 from bs4 import BeautifulSoup
 import csv
 import datetime
+import os
 import re
+from datetime import timedelta, timezone
 
 
 def main():
 
     print("===== START =====")
 
-    today = datetime.datetime.now().strftime("%Y%m%d")
+    # JSTで日付生成（重要）
+    JST = timezone(timedelta(hours=9))
+    today = datetime.datetime.now(JST).strftime("%Y%m%d")
+
+    # 出力フォルダ作成
+    os.makedirs("output", exist_ok=True)
+
+    csv_file = f"output/trading_value_ranking_{today}.csv"
 
     url = (
         "https://s.kabutan.jp/"
@@ -29,20 +36,12 @@ def main():
         )
     }
 
-    response = requests.get(
-        url,
-        headers=headers,
-        timeout=30
-    )
-
+    response = requests.get(url, headers=headers, timeout=30)
     response.raise_for_status()
 
     print(f"[INFO] status: {response.status_code}")
 
-    soup = BeautifulSoup(
-        response.text,
-        "html.parser"
-    )
+    soup = BeautifulSoup(response.text, "html.parser")
 
     rows = soup.select("table tbody tr")
 
@@ -55,30 +54,37 @@ def main():
     for idx, row in enumerate(rows):
 
         try:
+            text = row.get_text(" ", strip=True)
 
-            # 行全体テキスト
-            text = row.get_text(
-                " ",
-                strip=True
-            )
-
-            # 空行除外
             if not text:
                 continue
 
             print(f"[ROW {idx}] {text}")
 
-            # 分割
-            parts = text.split()
-
-            # 最低必要数
-            if len(parts) < 9:
-                print(f"[SKIP] row {idx} parts不足")
+            # 市場区分説明などを除外
+            if "東証" in text or "名証" in text or "札証" in text or "福証" in text:
+                print(f"[SKIP] row {idx} market label")
                 continue
 
-            # 例:
-            # ウチヤマＨＤ 6059 東S 342 -2 -0.58% 1 22.7倍 0.46倍 2.92%
+            parts = text.split()
 
+            # % と 倍 を結合
+            merged = []
+            for p in parts:
+                if p in ["%", "倍"]:
+                    if merged:
+                        merged[-1] += p
+                else:
+                    merged.append(p)
+
+            parts = merged
+
+            # 最低チェック
+            if len(parts) < 10:
+                print(f"[SKIP] row {idx} parts不足: {parts}")
+                continue
+
+            # データ分解
             name = parts[0]
             code = parts[1]
             market = parts[2]
@@ -88,11 +94,7 @@ def main():
             trade_value = parts[6]
             per = parts[7]
             pbr = parts[8]
-
-            if len(parts) >= 10:
-                yld = parts[9]
-            else:
-                yld = ""
+            yld = parts[9]
 
             rank_no = start_no + len(output)
 
@@ -114,21 +116,11 @@ def main():
             print(f"[OK] {rank_no} {name}")
 
         except Exception as e:
-
             print(f"[ERROR] row {idx}: {e}")
-
             continue
 
-    csv_file = (
-        f"trading_value_ranking_{today}.csv"
-    )
-
-    with open(
-        csv_file,
-        "w",
-        newline="",
-        encoding="utf-8-sig"
-    ) as f:
+    # CSV出力
+    with open(csv_file, "w", newline="", encoding="utf-8-sig") as f:
 
         writer = csv.writer(f)
 
@@ -151,7 +143,6 @@ def main():
 
     print(f"[DONE] saved rows: {len(output)}")
     print(f"[FILE] {csv_file}")
-
     print("===== END =====")
 
 
