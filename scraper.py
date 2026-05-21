@@ -1,11 +1,7 @@
 # scraper.py
 
-from selenium import webdriver
-from selenium.webdriver.chrome.options import Options
-from selenium.webdriver.common.by import By
-from selenium.webdriver.support.ui import WebDriverWait
-from selenium.webdriver.support import expected_conditions as EC
-
+import requests
+from bs4 import BeautifulSoup
 import csv
 import datetime
 import time
@@ -17,47 +13,38 @@ def main():
 
     today = datetime.datetime.now().strftime("%Y%m%d")
 
-    chrome_options = Options()
-
-    chrome_options.add_argument("--headless=new")
-    chrome_options.add_argument("--no-sandbox")
-    chrome_options.add_argument("--disable-dev-shm-usage")
-    chrome_options.add_argument("--disable-gpu")
-    chrome_options.add_argument("--window-size=1920,1080")
-
-    # User-Agent追加（重要）
-    chrome_options.add_argument(
-        "--user-agent=Mozilla/5.0 "
-        "(Windows NT 10.0; Win64; x64) "
-        "AppleWebKit/537.36 "
-        "(KHTML, like Gecko) "
-        "Chrome/125.0 Safari/537.36"
-    )
-
-    driver = webdriver.Chrome(options=chrome_options)
-
     url = (
         "https://s.kabutan.jp/"
         "warnings/trading_value_ranking/"
         "?market=all&page=207"
     )
 
-    driver.get(url)
-
-    # 読み込み待機
-    WebDriverWait(driver, 15).until(
-        EC.presence_of_element_located(
-            (By.TAG_NAME, "table")
+    headers = {
+        "User-Agent": (
+            "Mozilla/5.0 "
+            "(Windows NT 10.0; Win64; x64) "
+            "AppleWebKit/537.36 "
+            "(KHTML, like Gecko) "
+            "Chrome/125.0 Safari/537.36"
         )
+    }
+
+    response = requests.get(
+        url,
+        headers=headers,
+        timeout=30
     )
 
-    # 少し待つ（Kabutan対策）
-    time.sleep(3)
+    response.raise_for_status()
 
-    rows = driver.find_elements(
-        By.CSS_SELECTOR,
-        "table tbody tr"
+    print(f"[INFO] status: {response.status_code}")
+
+    soup = BeautifulSoup(
+        response.text,
+        "html.parser"
     )
+
+    rows = soup.select("table tbody tr")
 
     print(f"[INFO] raw rows: {len(rows)}")
 
@@ -69,34 +56,31 @@ def main():
 
         try:
 
-            # 銘柄リンク有無で判定
-            stock_link = row.find_elements(
-                By.CSS_SELECTOR,
-                'a[href*="/stock/?code="]'
-            )
+            th = row.find("th")
 
-            if not stock_link:
-                print(f"[SKIP] row {idx} no stock link")
+            if not th:
+                print(f"[SKIP] row {idx} no th")
                 continue
 
-            # th
-            th = row.find_element(By.TAG_NAME, "th")
-
             # 銘柄名
-            name = (
-                th.find_element(By.TAG_NAME, "p")
-                .text
-                .strip()
-            )
+            p_tag = th.find("p")
+
+            if not p_tag:
+                print(f"[SKIP] row {idx} no p")
+                continue
+
+            name = p_tag.get_text(strip=True)
 
             # コード・市場
-            div_text = (
-                th.find_element(By.TAG_NAME, "div")
-                .text
-                .strip()
-            )
+            div_tag = th.find("div")
 
-            parts = div_text.split()
+            if div_tag:
+                parts = div_tag.get_text(
+                    " ",
+                    strip=True
+                ).split()
+            else:
+                parts = []
 
             if len(parts) >= 2:
                 code = parts[0]
@@ -108,8 +92,8 @@ def main():
                 code = ""
                 market = ""
 
-            # td
-            tds = row.find_elements(By.TAG_NAME, "td")
+            # td群
+            tds = row.find_all("td")
 
             if len(tds) < 7:
                 print(f"[SKIP] row {idx} td不足")
@@ -117,22 +101,19 @@ def main():
 
             stock_price = (
                 tds[0]
-                .text
-                .strip()
+                .get_text(strip=True)
                 .replace(",", "")
             )
 
             prev_diff = (
                 tds[1]
-                .text
-                .strip()
-                .replace("\n", " ")
+                .get_text(" ", strip=True)
             )
 
-            trade_value = tds[2].text.strip()
-            per = tds[4].text.strip()
-            pbr = tds[5].text.strip()
-            yld = tds[6].text.strip()
+            trade_value = tds[2].get_text(strip=True)
+            per = tds[4].get_text(strip=True)
+            pbr = tds[5].get_text(strip=True)
+            yld = tds[6].get_text(strip=True)
 
             raw_data = (
                 f"{name} "
@@ -162,7 +143,7 @@ def main():
 
             continue
 
-    driver.quit()
+        time.sleep(0.05)
 
     csv_file = (
         f"trading_value_ranking_{today}.csv"
