@@ -15,7 +15,7 @@ import subprocess
 import hashlib
 
 OUTPUT_DIR = "output"
-HASH_FILE = "output/.page1_hash"
+HASH_FILE = os.path.join(OUTPUT_DIR, ".page1_hash")
 
 
 def log(msg):
@@ -23,15 +23,15 @@ def log(msg):
 
 
 # =========================
-# 1. 1ページ目ハッシュ取得
+# 最新CSV取得（＝比較対象）
 # =========================
-def get_page1_file():
+def get_latest_file():
 
     files = [
         f for f in os.listdir(OUTPUT_DIR)
         if f.startswith("trading_value_ranking_")
-        and "_p1" in f
         and f.endswith(".csv")
+        and f != "trading_value_ranking_merged.csv"
     ]
 
     if not files:
@@ -41,6 +41,9 @@ def get_page1_file():
     return os.path.join(OUTPUT_DIR, files[-1])
 
 
+# =========================
+# ハッシュ取得
+# =========================
 def get_hash(path):
 
     if not path or not os.path.exists(path):
@@ -68,7 +71,7 @@ def save_hash(h):
 
 
 # =========================
-# 2. cleanup実行
+# cleanup実行
 # =========================
 def run_cleanup():
 
@@ -78,17 +81,17 @@ def run_cleanup():
 
 
 # =========================
-# 3. data2csv実行
+# data2csv実行
 # =========================
 def run_scraper():
 
-    log("[STEP] scraper start")
+    log("[STEP] data2csv start")
 
     subprocess.run(["python", "data2csv.py"], check=True)
 
 
 # =========================
-# 4. merge実行
+# merge実行
 # =========================
 def run_merge():
 
@@ -109,8 +112,8 @@ def main():
     # =========================
     # STEP1: 更新チェック
     # =========================
-    page1_file = get_page1_file()
-    new_hash = get_hash(page1_file)
+    latest_file = get_latest_file()
+    new_hash = get_hash(latest_file)
     old_hash = load_old_hash()
 
     if new_hash and new_hash == old_hash:
@@ -129,7 +132,7 @@ def main():
     run_cleanup()
 
     # =========================
-    # STEP3: scrape
+    # STEP3: data2csv
     # =========================
     run_scraper()
 
