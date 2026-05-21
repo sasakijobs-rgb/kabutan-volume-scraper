@@ -125,18 +125,18 @@ def main():
         writer = csv.writer(f)
 
         writer.writerow([
-            "date",
-            "rank",
-            "name",
-            "code",
-            "market",
-            "stock_price",
-            "diff_price",
-            "diff_percent",
-            "trade_value",
+            "日付",
+            "順位",
+            "銘柄名",
+            "コード",
+            "市場",
+            "株価(百万円)",
+            "前日比",
+            "前日比(%)",
+            "売買代金",
             "PER",
             "PBR",
-            "yield"
+            "利回り"
         ])
 
         writer.writerows(output)
