@@ -4,7 +4,7 @@ import requests
 from bs4 import BeautifulSoup
 import csv
 import datetime
-import time
+import re
 
 
 def main():
@@ -56,83 +56,59 @@ def main():
 
         try:
 
-            th = row.find("th")
+            # 行全体テキスト
+            text = row.get_text(
+                " ",
+                strip=True
+            )
 
-            if not th:
-                print(f"[SKIP] row {idx} no th")
+            # 空行除外
+            if not text:
                 continue
 
-            # 銘柄名
-            p_tag = th.find("p")
+            print(f"[ROW {idx}] {text}")
 
-            if not p_tag:
-                print(f"[SKIP] row {idx} no p")
+            # 分割
+            parts = text.split()
+
+            # 最低必要数
+            if len(parts) < 9:
+                print(f"[SKIP] row {idx} parts不足")
                 continue
 
-            name = p_tag.get_text(strip=True)
+            # 例:
+            # ウチヤマＨＤ 6059 東S 342 -2 -0.58% 1 22.7倍 0.46倍 2.92%
 
-            # コード・市場
-            div_tag = th.find("div")
+            name = parts[0]
+            code = parts[1]
+            market = parts[2]
+            stock_price = parts[3]
+            diff_price = parts[4]
+            diff_percent = parts[5]
+            trade_value = parts[6]
+            per = parts[7]
+            pbr = parts[8]
 
-            if div_tag:
-                parts = div_tag.get_text(
-                    " ",
-                    strip=True
-                ).split()
+            if len(parts) >= 10:
+                yld = parts[9]
             else:
-                parts = []
-
-            if len(parts) >= 2:
-                code = parts[0]
-                market = parts[1]
-            elif len(parts) == 1:
-                code = parts[0]
-                market = ""
-            else:
-                code = ""
-                market = ""
-
-            # td群
-            tds = row.find_all("td")
-
-            if len(tds) < 7:
-                print(f"[SKIP] row {idx} td不足")
-                continue
-
-            stock_price = (
-                tds[0]
-                .get_text(strip=True)
-                .replace(",", "")
-            )
-
-            prev_diff = (
-                tds[1]
-                .get_text(" ", strip=True)
-            )
-
-            trade_value = tds[2].get_text(strip=True)
-            per = tds[4].get_text(strip=True)
-            pbr = tds[5].get_text(strip=True)
-            yld = tds[6].get_text(strip=True)
-
-            raw_data = (
-                f"{name} "
-                f"{code} "
-                f"{market} "
-                f"{stock_price} "
-                f"{prev_diff} "
-                f"{trade_value} "
-                f"{per} "
-                f"{pbr} "
-                f"{yld}"
-            )
+                yld = ""
 
             rank_no = start_no + len(output)
 
             output.append([
                 today,
                 rank_no,
-                raw_data
+                name,
+                code,
+                market,
+                stock_price,
+                diff_price,
+                diff_percent,
+                trade_value,
+                per,
+                pbr,
+                yld
             ])
 
             print(f"[OK] {rank_no} {name}")
@@ -143,8 +119,6 @@ def main():
 
             continue
 
-        time.sleep(0.05)
-
     csv_file = (
         f"trading_value_ranking_{today}.csv"
     )
@@ -153,15 +127,24 @@ def main():
         csv_file,
         "w",
         newline="",
-        encoding="utf-8"
+        encoding="utf-8-sig"
     ) as f:
 
         writer = csv.writer(f)
 
         writer.writerow([
-            "日付",
-            "順位",
-            "raw_data"
+            "date",
+            "rank",
+            "name",
+            "code",
+            "market",
+            "stock_price",
+            "diff_price",
+            "diff_percent",
+            "trade_value",
+            "PER",
+            "PBR",
+            "yield"
         ])
 
         writer.writerows(output)
