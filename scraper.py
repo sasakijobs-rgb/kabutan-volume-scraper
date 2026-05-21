@@ -1,4 +1,4 @@
-# scraper_208.py
+# scraper_207.py
 from selenium import webdriver
 from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.chrome.options import Options
@@ -9,7 +9,7 @@ import datetime
 import re
 
 def main():
-    print("===== START (208 PAGE ONLY) =====")
+    print("===== START (207 PAGE ONLY) =====")
     
     # 日付
     today = datetime.datetime.now().strftime("%Y%m%d")
@@ -27,7 +27,7 @@ def main():
         options=chrome_options
     )
     
-    url = "https://s.kabutan.jp/warnings/trading_value_ranking/?market=all&page=208"
+    url = "https://s.kabutan.jp/warnings/trading_value_ranking/?market=all&page=207"
     driver.get(url)
     
     # 行データ取得
@@ -35,7 +35,7 @@ def main():
     print(f"[INFO] raw rows: {len(rows)}")
     
     output = []
-    start_no = 4141  # 208ページの最初の順位
+    start_no = 4141  # 207ページの最初の順位
     
     for idx, row in enumerate(rows):
         # 銘柄名、コード、市場
@@ -64,7 +64,7 @@ def main():
     driver.quit()
     
     # CSV 書き込み
-    csv_file = "trading_value_ranking_20260520.csv"
+    csv_file = "trading_value_ranking_20260521.csv"
     with open(csv_file, mode="w", newline="", encoding="utf-8") as f:
         writer = csv.writer(f)
         writer.writerow(["日付", "順位", "raw_data"])
