@@ -38,10 +38,10 @@ jobs:
       # =========================
       # Chromiumインストール
       # =========================
-      - name: Install Chromium
+      - name: Install chromium
         run: |
           sudo apt-get update
-          sudo apt-get install -y chromium-browser
+          sudo apt-get install -y chromium-browser || true
 
       # =========================
       # requirementsインストール
