@@ -10,24 +10,24 @@ def log(msg):
     print(msg)
 
 
-def main():
+def main(page=1):
 
     JST = timezone(timedelta(hours=9))
-
     start_time = datetime.datetime.now(JST)
 
     # =========================
-    # START DISPLAY
+    # URL（指定ページ対応）
     # =========================
     url = (
         "https://s.kabutan.jp/"
         "warnings/trading_value_ranking/"
-        "?market=all&page=1"
+        f"?market=all&page={page}"
     )
 
-    log("【開始】" + start_time.strftime("%H:%M"))
+    log(f"【開始】{start_time.strftime('%H:%M')}")
     log("")
-    log(f"20件 / 4123件中 {start_time.strftime('%H:%M')}")
+    log(f"ページ: {page}")
+    log(f"{start_time.strftime('%H:%M')} / 取得開始")
     log(url)
     log("")
 
@@ -37,7 +37,7 @@ def main():
 
         os.makedirs("output", exist_ok=True)
 
-        csv_file = f"output/trading_value_ranking_{today}.csv"
+        csv_file = f"output/trading_value_ranking_{today}_p{page}.csv"
 
         headers = {
             "User-Agent": (
@@ -56,8 +56,11 @@ def main():
 
         rows = soup.select("table tbody tr")
 
+        log(f"[INFO] rows: {len(rows)}")
+
         output = []
-        start_no = 4141
+
+        start_no = 1 + (page - 1) * 20  # 1ページ20件想定
 
         for idx, row in enumerate(rows):
 
@@ -68,6 +71,7 @@ def main():
 
             parts = text.split()
 
+            # % / 倍 を結合
             merged = []
             for p in parts:
                 if p in ["%", "倍"]:
@@ -78,6 +82,7 @@ def main():
 
             parts = merged
 
+            # 見出し行除外
             if len(parts) < 10:
                 continue
 
@@ -109,8 +114,10 @@ def main():
                 yld
             ])
 
+            log(f"[OK] {rank_no} {name}")
+
         # =========================
-        # CSV OUTPUT
+        # CSV出力
         # =========================
         with open(csv_file, "w", newline="", encoding="utf-8-sig") as f:
 
@@ -134,19 +141,15 @@ def main():
             writer.writerows(output)
 
         end_time = datetime.datetime.now(JST)
-
         duration = end_time - start_time
 
-        # =========================
-        # END DISPLAY（正常）
-        # =========================
         msg = (
             f"【終了】{end_time.strftime('%H:%M')}  "
             f"作業時間：合計 {duration.seconds // 60}分"
         )
 
         log(msg)
-        log(msg)  # ログにも同じ内容
+        log(msg)
 
         log(f"[FILE] {csv_file}")
         log(f"[DONE] {len(output)} rows")
@@ -155,7 +158,7 @@ def main():
 
         end_time = datetime.datetime.now(JST)
 
-        log("【エラー終了】" + end_time.strftime("%H:%M"))
+        log(f"【エラー終了】{end_time.strftime('%H:%M')}")
         log(f"エラー内容：{e}")
         log("作業は途中で停止しました")
 
@@ -163,4 +166,6 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+
+    # ★ここでページ指定
+    main(page=1)
