@@ -78,7 +78,7 @@ def main():
     # STEP 2: データ取得
     # =========================
     print("[STEP 2/3] data2csv.py 実行")
-    run_py("data2csv.py")
+    #   run_py("data2csv.py")
 
     # =========================
     # STEP 3: merge
