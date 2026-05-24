@@ -6,7 +6,7 @@ def check_update():
 
     if not html:
         print("[実行] 取得失敗（続行）")
-        return True
+        return True, None
 
     # =========================
     # table部分だけ抽出
@@ -23,15 +23,16 @@ def check_update():
     # 判定ロジック
     # =========================
 
+    # 初回
     if old_hash is None:
         print("[実行] ハッシュファイルなし")
-        save_hash(new_hash)
-        return True
+        return True, new_hash
 
+    # 変更なし → 停止
     if old_hash == new_hash:
         print("[STOP] データ変更なし → scraper停止")
-        return False
+        return False, None
 
+    # 変更あり → 実行
     print("[実行] データ更新あり")
-    save_hash(new_hash)
-    return True
+    return True, new_hash
