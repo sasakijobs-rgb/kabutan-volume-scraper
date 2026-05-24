@@ -1,4 +1,5 @@
 import os
+import re
 
 OUTPUT_DIR = "output"
 MAX_FILES = 150
@@ -8,19 +9,49 @@ def log(msg):
     print(msg)
 
 
+# =========================================
+# 対象ファイル取得
+# =========================================
 def get_target_files():
 
-    files = [
-        f for f in os.listdir(OUTPUT_DIR)
-        if f.startswith("trading_value_ranking_")
-        and f.endswith(".csv")
-        and f != "trading_value_ranking_merged.csv"
-    ]
+    if not os.path.exists(OUTPUT_DIR):
 
+        log("[INFO] output dir not found")
+
+        return []
+
+    # 対象:
+    # trading_value_ranking_YYYYMMDD.csv
+    pattern = re.compile(
+        r"^trading_value_ranking_(\d{8})\.csv$"
+    )
+
+    files = []
+
+    for f in os.listdir(OUTPUT_DIR):
+
+        # 除外ファイル
+        if f in [
+            "today_data20.csv",
+            "last_data20.csv",
+            "trading_value_ranking_merged.csv"
+        ]:
+            continue
+
+        # 日付CSVのみ対象
+        if pattern.match(f):
+
+            files.append(f)
+
+    # 古い順
     files.sort()
+
     return files
 
 
+# =========================================
+# cleanup
+# =========================================
 def cleanup():
 
     files = get_target_files()
@@ -30,7 +61,9 @@ def cleanup():
     log(f"[INFO] current files: {file_count}")
 
     if file_count <= MAX_FILES:
+
         log("[OK] cleanup not needed")
+
         return
 
     delete_count = file_count - MAX_FILES
@@ -39,14 +72,22 @@ def cleanup():
 
     for i in range(delete_count):
 
-        file_path = os.path.join(OUTPUT_DIR, files[i])
+        file_name = files[i]
+
+        file_path = os.path.join(
+            OUTPUT_DIR,
+            file_name
+        )
 
         try:
+
             os.remove(file_path)
-            log(f"[DELETE] {files[i]}")
+
+            log(f"[DELETE] {file_name}")
 
         except Exception as e:
-            log(f"[ERROR] {files[i]}: {e}")
+
+            log(f"[ERROR] {file_name}: {e}")
 
     log("[DONE] cleanup finished")
 
