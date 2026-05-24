@@ -45,22 +45,22 @@ def main():
         return
 
     # STEP 1
-    # print("[STEP 1/3] cleanup.py 実行")
+    print("[STEP 1/3] cleanup.py 実行")
     #
-    # if not run_py("cleanup.py"):
-    #
-    #     print("[ABORT] cleanup失敗")
-    #
-    #     return
+    if not run_py("cleanup.py"):
+    
+        print("[ABORT] cleanup失敗")
+    
+        return
 
     # STEP 2
-    # print("[STEP 2/3] data2csv.py 実行")
-    #
-    # if not run_py("data2csv.py"):
-    #
-    #     print("[ABORT] data2csv失敗")
-    #
-    #     return
+    print("[STEP 2/3] data2csv.py 実行")
+    
+    if not run_py("data2csv.py"):
+    
+        print("[ABORT] data2csv失敗")
+    
+        return
 
     # STEP 3
     print("[STEP 3/3] merge.py 実行")
