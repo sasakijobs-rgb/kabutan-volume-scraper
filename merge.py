@@ -1,106 +1,121 @@
 import os
 import csv
-import hashlib
+import glob
+import shutil
 
 OUTPUT_DIR = "output"
-MERGED_FILE = "output/trading_value_ranking_merged.csv"
-HASH_FILE = "output/.merge_hash"
+
+MERGED_FILE = os.path.join(
+    OUTPUT_DIR,
+    "trading_value_ranking_merged.csv"
+)
 
 
-def log(msg):
-    print(msg)
+# =========================================
+# 最新CSV取得
+# =========================================
+def get_latest_csv():
+    files = sorted(
+        glob.glob(os.path.join(
+            OUTPUT_DIR,
+            "trading_value_ranking_*.csv"
+        ))
+    )
+    return files[-1] if files else None
 
 
-def get_csv_files():
+# =========================================
+# mergedの既存キー読み込み（重複防止）
+# =========================================
+def load_existing_keys():
 
-    files = [
-        f for f in os.listdir(OUTPUT_DIR)
-        if f.startswith("trading_value_ranking_")
-        and f.endswith(".csv")
-        and f != "trading_value_ranking_merged.csv"
-    ]
+    keys = set()
 
-    files.sort()
-    return files
+    if not os.path.exists(MERGED_FILE):
+        return keys
 
+    with open(MERGED_FILE, "r", encoding="utf-8-sig") as f:
+        reader = csv.reader(f)
 
-def calc_hash(files):
+        next(reader, None)  # header skip
 
-    h = hashlib.md5()
-
-    for f in files:
-
-        path = os.path.join(OUTPUT_DIR, f)
-
-        with open(path, "rb") as fp:
-            h.update(fp.read())
-
-    return h.hexdigest()
-
-
-def load_hash():
-
-    if not os.path.exists(HASH_FILE):
-        return None
-
-    with open(HASH_FILE, "r") as f:
-        return f.read().strip()
-
-
-def save_hash(h):
-
-    with open(HASH_FILE, "w") as f:
-        f.write(h)
-
-
-def merge():
-
-    files = get_csv_files()
-
-    if not files:
-        log("[SKIP] no csv files found")
-        return
-
-    new_hash = calc_hash(files)
-    old_hash = load_hash()
-
-    if new_hash == old_hash:
-        log("[SKIP] no changes detected")
-        return
-
-    merged_rows = []
-    header = None
-
-    for file in files:
-
-        path = os.path.join(OUTPUT_DIR, file)
-
-        with open(path, "r", encoding="utf-8-sig") as f:
-
-            reader = list(csv.reader(f))
-
-            if not reader:
+        for row in reader:
+            if len(row) < 4:
                 continue
 
-            if header is None:
-                header = reader[0]
+            # 日付 + コードでユニーク化
+            keys.add((row[0], row[3]))
 
-            merged_rows.extend(reader[1:])  # ヘッダー除外
+    return keys
 
-    with open(MERGED_FILE, "w", newline="", encoding="utf-8-sig") as f:
 
-        writer = csv.writer(f)
+# =========================================
+# 初回作成
+# =========================================
+def init_merged(latest_csv):
 
-        if header:
-            writer.writerow(header)
+    os.makedirs(OUTPUT_DIR, exist_ok=True)
 
-        writer.writerows(merged_rows)
+    # 初回はそのままコピー（最も安全）
+    shutil.copy(latest_csv, MERGED_FILE)
 
-    save_hash(new_hash)
+    print("[INIT] merged作成完了（初回コピー）")
 
-    log(f"[MERGED] {len(merged_rows)} rows")
-    log(f"[FILE] {MERGED_FILE}")
+
+# =========================================
+# 追記処理
+# =========================================
+def append_to_merged(latest_csv):
+
+    existing = load_existing_keys()
+    added = 0
+
+    with open(latest_csv, "r", encoding="utf-8-sig") as f:
+        reader = csv.reader(f)
+
+        header = next(reader, None)
+
+        with open(MERGED_FILE, "a", newline="", encoding="utf-8-sig") as out:
+            writer = csv.writer(out)
+
+            for row in reader:
+
+                if len(row) < 4:
+                    continue
+
+                key = (row[0], row[3])
+
+                if key in existing:
+                    continue
+
+                writer.writerow(row)
+                existing.add(key)
+                added += 1
+
+    print(f"[OK] merge完了 +{added}件")
+
+
+# =========================================
+# main
+# =========================================
+def run():
+
+    os.makedirs(OUTPUT_DIR, exist_ok=True)
+
+    latest_csv = get_latest_csv()
+
+    if not latest_csv:
+        print("[WARN] CSVなし")
+        return
+
+    # 初回
+    if not os.path.exists(MERGED_FILE):
+        init_merged(latest_csv)
+        return
+
+    # 2回目以降
+    append_to_merged(latest_csv)
 
 
 if __name__ == "__main__":
-    merge()
+    run()
