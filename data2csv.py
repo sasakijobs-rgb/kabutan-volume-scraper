@@ -196,6 +196,8 @@ def main():
 
     today = start_time.strftime("%Y%m%d")
 
+    print(f"start {start_time.strftime('%Y/%m/%d %H:%M')}")
+    
     os.makedirs("output", exist_ok=True)
 
     csv_file = f"output/trading_value_ranking_{today}.csv"
@@ -242,6 +244,14 @@ def main():
             break
 
         all_data.extend(data)
+
+
+        current_time = datetime.datetime.now(JST).strftime("%H:%M")
+
+        print(
+            f"{len(all_data)}件 / {total_count or '?'}件中 "
+            f"{current_time}"
+        )
 
         # =========================
         # 総件数取得
@@ -330,6 +340,7 @@ def main():
 
     log(f"[TIME] {duration.seconds // 60}分")
 
+    print(f"\nend {end_time.strftime('%Y/%m/%d %H:%M')}")
 
 if __name__ == "__main__":
     main()
