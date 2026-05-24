@@ -6,6 +6,7 @@ import os
 import re
 import time
 import random
+import logging
 from datetime import timedelta, timezone
 
 
@@ -45,9 +46,13 @@ def parse_page(page, start_no, today, session):
 
             log(f"[STOP] page {page} status {response.status_code}")
 
+            logging.info(f"[STOP] page {page} status {response.status_code}")
+
             return [], ""
 
         log(f"[WARN] page {page} status {response.status_code} retry {retry+1}")
+
+        logging.info(f"[WARN] page {page} status {response.status_code} retry {retry+1}")
 
         time.sleep(2 + random.random())
 
@@ -117,15 +122,14 @@ def parse_page(page, start_no, today, session):
 
         parts = cleaned
 
-        # デバッグ
-        # print(parts)
-
         # =========================
         # 列数チェック
         # =========================
         if len(parts) < 10:
 
             log(f"[SKIP] len error : {parts}")
+
+            logging.info(f"[SKIP] len error : {parts}")
 
             continue
 
@@ -149,6 +153,8 @@ def parse_page(page, start_no, today, session):
 
             log(f"[SKIP] parse error : {parts}")
 
+            logging.error(f"[SKIP] parse error : {parts} {e}")
+
             continue
 
         # =========================
@@ -164,6 +170,8 @@ def parse_page(page, start_no, today, session):
         if not stock_price_check.isdigit():
 
             log(f"[SKIP] stock price error : {parts}")
+
+            logging.info(f"[SKIP] stock price error : {parts}")
 
             continue
 
@@ -196,13 +204,29 @@ def main():
 
     today = start_time.strftime("%Y%m%d")
 
+    # =========================
+    # logging設定（追加のみ）
+    # =========================
+    os.makedirs("output", exist_ok=True)
+
+    logging.basicConfig(
+        filename=f"output/log_{today}.log",
+        level=logging.INFO,
+        format="%(asctime)s %(message)s",
+        encoding="utf-8"
+    )
+
     print(f"start {start_time.strftime('%Y/%m/%d %H:%M')}")
-    
+
+    logging.info(f"start {start_time.strftime('%Y/%m/%d %H:%M')}")
+
     os.makedirs("output", exist_ok=True)
 
     csv_file = f"output/trading_value_ranking_{today}.csv"
 
     log(f"===== START {start_time.strftime('%H:%M')} =====")
+
+    logging.info(f"===== START {start_time.strftime('%H:%M')} =====")
 
     session = requests.Session()
 
@@ -227,6 +251,8 @@ def main():
 
         log(f"[PAGE] {page}")
 
+        logging.info(f"[PAGE] {page}")
+
         data, html = parse_page(
             page,
             start_no,
@@ -241,14 +267,20 @@ def main():
 
             log("[STOP] no data")
 
+            logging.info("[STOP] no data")
+
             break
 
         all_data.extend(data)
 
-
         current_time = datetime.datetime.now(JST).strftime("%H:%M")
 
         print(
+            f"{len(all_data)}件 / {total_count or '?'}件中 "
+            f"{current_time}"
+        )
+
+        logging.info(
             f"{len(all_data)}件 / {total_count or '?'}件中 "
             f"{current_time}"
         )
@@ -267,7 +299,11 @@ def main():
 
             log(f"[TOTAL] {total_count}")
 
+            logging.info(f"[TOTAL] {total_count}")
+
         log(f"[COUNT] {len(all_data)}")
+
+        logging.info(f"[COUNT] {len(all_data)}")
 
         start_no += len(data)
 
@@ -279,6 +315,8 @@ def main():
         if total_count and len(all_data) >= total_count:
 
             log("[STOP] total reached")
+
+            logging.info("[STOP] total reached")
 
             break
 
@@ -295,6 +333,8 @@ def main():
             sleep_sec = 180 + random.randint(-30, 30)
 
             log(f"[SLEEP] 2000件到達 -> {sleep_sec}秒休憩")
+
+            logging.info(f"[SLEEP] 2000件到達 -> {sleep_sec}秒休憩")
 
             time.sleep(sleep_sec)
 
@@ -334,13 +374,22 @@ def main():
 
     log(f"===== END {end_time.strftime('%H:%M')} =====")
 
+    logging.info(f"===== END {end_time.strftime('%H:%M')} =====")
+
     log(f"[FILE] {csv_file}")
+
+    logging.info(f"[FILE] {csv_file}")
 
     log(f"[ROWS] {len(all_data)}")
 
+    logging.info(f"[ROWS] {len(all_data)}")
+
     log(f"[TIME] {duration.seconds // 60}分")
 
+    logging.info(f"[TIME] {duration.seconds // 60}分")
+
     print(f"\nend {end_time.strftime('%Y/%m/%d %H:%M')}")
+
 
 if __name__ == "__main__":
     main()
