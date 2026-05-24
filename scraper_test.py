@@ -35,12 +35,12 @@ def run_py(script_name: str) -> bool:
 # =========================================
 def main():
 
-    print("\n===== PIPELINE START =====\n")
+    print("\n===== scraper.py START =====\n")
 
     # 更新チェック
     if not is_updated():
 
-        print("[ABORT] パイプライン終了")
+        print("[ABORT] scraper.py 終了")
 
         return
 
@@ -74,7 +74,7 @@ def main():
     # 全成功時のみ更新
     update_last()
 
-    print("\n===== PIPELINE END =====\n")
+    print("\n===== scraper.py END =====\n")
 
     print("[DONE] 全処理成功")
 
