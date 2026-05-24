@@ -61,7 +61,10 @@ def extract_table_html(html):
 
         soup = BeautifulSoup(html, "html.parser")
 
-        table = soup.find("table", class_="gray-sticky-table")
+        table = soup.find(
+            "table",
+            class_="gray-sticky-table"
+        )
 
         if table is None:
 
@@ -81,7 +84,7 @@ def extract_table_html(html):
 
 
 # =========================================
-# ハッシュ生成
+# SHA256生成
 # =========================================
 def make_hash(text):
 
@@ -94,7 +97,7 @@ def make_hash(text):
 
 
 # =========================================
-# ファイル読み込み
+# ハッシュ読込
 # =========================================
 def load_hash(file_path):
 
@@ -115,7 +118,7 @@ def load_hash(file_path):
 
 
 # =========================================
-# ファイル保存
+# ハッシュ保存
 # =========================================
 def save_hash(file_path, hash_value):
 
@@ -133,24 +136,29 @@ def save_hash(file_path, hash_value):
 
 
 # =========================================
-# today → last コピー
+# today → last
+# 正常終了時のみ呼ぶ
 # =========================================
-def backup_today_hash():
+def finalize_hash():
 
     try:
 
-        if os.path.exists(TODAY_HASH_FILE):
+        if not os.path.exists(TODAY_HASH_FILE):
 
-            shutil.copy(
-                TODAY_HASH_FILE,
-                LAST_HASH_FILE
-            )
+            print("[WARN] today_hash.txt が存在しません")
 
-            print("[OK] today_hash → last_hash コピー完了")
+            return
+
+        shutil.copy(
+            TODAY_HASH_FILE,
+            LAST_HASH_FILE
+        )
+
+        print("[OK] last_hash.txt 更新完了")
 
     except Exception as e:
 
-        print(f"[ERROR] バックアップ失敗: {e}")
+        print(f"[ERROR] last_hash 更新失敗: {e}")
 
 
 # =========================================
@@ -160,7 +168,6 @@ def check_update():
 
     print("\n===== HASH CHECK =====")
 
-    # 前回ハッシュ取得
     old_hash = load_hash(LAST_HASH_FILE)
 
     # HTML取得
@@ -181,21 +188,19 @@ def check_update():
 
         return True
 
-    # 新ハッシュ生成
+    # 新hash生成
     new_hash = make_hash(table_html)
 
     print(f"[NEW HASH] {new_hash}")
     print(f"[OLD HASH] {old_hash}")
 
-    # today_hash 保存
+    # 今回hash保存
     save_hash(TODAY_HASH_FILE, new_hash)
 
     # 初回
     if old_hash is None:
 
         print("[実行] 初回実行")
-
-        backup_today_hash()
 
         return True
 
@@ -209,14 +214,42 @@ def check_update():
     # 更新あり
     print("[実行] 更新あり → scraper実行")
 
-    # 最新をlastへ反映
-    backup_today_hash()
-
     return True
 
 
 # =========================================
-# メイン処理
+# 本処理
+# =========================================
+def run_scraper():
+
+    print("\n===== SCRAPER START =====")
+
+    try:
+
+        # =====================================
+        # ここに本スクレイピング処理を書く
+        # =====================================
+
+        print("スクレイピング実行中...")
+
+        # 例:
+        # save_db()
+        # send_discord()
+        # export_csv()
+
+        print("[OK] 全処理正常終了")
+
+        return True
+
+    except Exception as e:
+
+        print(f"[ERROR] scraper失敗: {e}")
+
+        return False
+
+
+# =========================================
+# メイン
 # =========================================
 def main():
 
@@ -228,13 +261,17 @@ def main():
 
         sys.exit(0)
 
-    print("\n===== SCRAPER START =====")
+    # scraper実行
+    success = run_scraper()
 
-    # =========================
-    # ここに本スクレイピング処理を書く
-    # =========================
+    # 正常終了時のみ last_hash 更新
+    if success:
 
-    print("スクレイピング実行中...")
+        finalize_hash()
+
+    else:
+
+        print("[WARN] scraper失敗のため last_hash 更新しません")
 
 
 # =========================================
