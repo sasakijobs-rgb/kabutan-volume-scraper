@@ -19,6 +19,10 @@ def check_update():
     print(f"[NEW HASH] {new_hash}")
     print(f"[OLD HASH] {old_hash}")
 
+    
+if __name__ == "__main__":
+    main()
+
     # =========================
     # 判定ロジック
     # =========================
