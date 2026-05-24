@@ -2,202 +2,111 @@ import requests
 from bs4 import BeautifulSoup
 import json
 import os
-import shutil
-import sys
 
 URL = "https://s.kabutan.jp/warnings/trading_value_ranking/?market=all"
 
 OUTPUT_DIR = "output"
-
-CURRENT_FILE = os.path.join(OUTPUT_DIR, "current.json")
-PREVIOUS_FILE = os.path.join(OUTPUT_DIR, "previous.json")
+TODAY_FILE = os.path.join(OUTPUT_DIR, "today.json")
+LAST_FILE = os.path.join(OUTPUT_DIR, "last.json")
 
 
 # =========================================
 # HTML取得
 # =========================================
-def fetch_first_page():
-
-    headers = {
-        "User-Agent": (
-            "Mozilla/5.0 "
-            "(Windows NT 10.0; Win64; x64) "
-            "AppleWebKit/537.36 "
-            "(KHTML, like Gecko) "
-            "Chrome/124.0 Safari/537.36"
-        )
-    }
+def fetch_html():
 
     try:
 
-        response = requests.get(
-            URL,
-            headers=headers,
-            timeout=30
-        )
+        r = requests.get(URL, timeout=30)
 
-        response.raise_for_status()
+        if r.status_code != 200:
+            return None
 
-        response.encoding = response.apparent_encoding
+        return r.text
 
-        print("[OK] HTML取得成功")
-
-        return response.text
-
-    except Exception as e:
-
-        print(f"[ERROR] HTML取得失敗: {e}")
-
+    except Exception:
         return None
 
 
 # =========================================
-# テーブル → dict化（空でも返す）
+# テーブル抽出 → dict化
 # =========================================
-def extract_stock_data(html):
+def extract_table(html):
 
     if not html:
         return []
 
-    try:
+    soup = BeautifulSoup(html, "html.parser")
 
-        soup = BeautifulSoup(html, "html.parser")
+    rows = soup.select("table.stock_table.st_market tbody tr")
 
-        rows = soup.select("table.stock_table.st_market tbody tr")
+    data = []
 
-        stocks = []
+    for row in rows:
 
-        for row in rows:
+        cols = row.find_all(["td", "th"])
 
-            cols = row.find_all(["td", "th"])
+        if len(cols) < 10:
+            continue
 
-            if len(cols) < 13:
-                continue
+        data.append({
+            "code": cols[0].get_text(strip=True),
+            "name": cols[1].get_text(strip=True),
+            "price": cols[5].get_text(strip=True),
+            "change": cols[7].get_text(strip=True),
+            "change_percent": cols[8].get_text(strip=True),
+        })
 
-            item = {
-                "code": cols[0].get_text(strip=True),
-                "name": cols[1].get_text(strip=True),
-                "market": cols[2].get_text(strip=True),
-                "price": cols[5].get_text(strip=True),
-                "change": cols[7].get_text(strip=True),
-                "change_percent": cols[8].get_text(strip=True),
-                "trading_value": cols[9].get_text(strip=True),
-                "per": cols[10].get_text(strip=True),
-                "pbr": cols[11].get_text(strip=True),
-                "yield": cols[12].get_text(strip=True),
-            }
-
-            stocks.append(item)
-
-        print(f"[OK] 取得件数: {len(stocks)}")
-
-        return stocks
-
-    except Exception as e:
-
-        print(f"[ERROR] データ抽出失敗: {e}")
-
-        return []
+    return data
 
 
 # =========================================
 # JSON保存
 # =========================================
-def save_json(file_path, data):
+def save_json(path, data):
 
-    try:
-
-        with open(file_path, "w", encoding="utf-8") as f:
-
-            json.dump(
-                data,
-                f,
-                ensure_ascii=False,
-                indent=2
-            )
-
-        print(f"[OK] 保存: {file_path}")
-
-    except Exception as e:
-
-        print(f"[ERROR] JSON保存失敗: {e}")
+    with open(path, "w", encoding="utf-8") as f:
+        json.dump(data, f, ensure_ascii=False, indent=2)
 
 
 # =========================================
-# JSON読込
+# JSON読み込み
 # =========================================
-def load_json(file_path):
+def load_json(path):
 
-    try:
-
-        if not os.path.exists(file_path):
-            return None
-
-        with open(file_path, "r", encoding="utf-8") as f:
-
-            return json.load(f)
-
-    except Exception as e:
-
-        print(f"[ERROR] JSON読込失敗: {e}")
-
+    if not os.path.exists(path):
         return None
 
+    with open(path, "r", encoding="utf-8") as f:
+        return json.load(f)
+
 
 # =========================================
-# 更新判定（空でも必ず返す）
+# 更新チェック
 # =========================================
-def check_update():
+def is_updated():
 
-    print("\n===== CHECK UPDATE =====")
-
-    html = fetch_first_page()
-
-    current_data = extract_stock_data(html)
-
-    # output作成
     os.makedirs(OUTPUT_DIR, exist_ok=True)
 
-    # ★空でも必ず保存
-    save_json(CURRENT_FILE, current_data)
+    html = fetch_html()
+    current = extract_table(html)
 
-    old_data = load_json(PREVIOUS_FILE)
+    # 必ず保存
+    save_json(TODAY_FILE, current)
+
+    old = load_json(LAST_FILE)
 
     # 初回
-    if old_data is None:
-        print("[実行] 初回実行")
-        return True, current_data
+    if old is None:
+        print("[INFO] 初回実行")
+        return True
 
     # 比較
-    if old_data == current_data:
+    if old == current:
         print("[STOP] 変更なし")
-        return False, current_data
+        return False
 
-    print("[実行] 変更あり")
-    return True, current_data
-
-
-# =========================================
-# scraper本処理（空データでも動く）
-# =========================================
-def run_scraper(data):
-
-    print("\n===== SCRAPER START =====")
-
-    print(f"件数: {len(data)}")
-
-    # 空データでも実行
-    if len(data) == 0:
-        print("[WARN] データ0件（空実行）")
-
-    # ここに本処理
-    # DB保存
-    # CSV出力
-    # Discord通知
-    # etc
-
-    print("[OK] 全処理正常終了")
-
+    print("[RUN] 更新あり")
     return True
 
 
@@ -206,31 +115,23 @@ def run_scraper(data):
 # =========================================
 def main():
 
-    os.makedirs(OUTPUT_DIR, exist_ok=True)
+    if not is_updated():
+        return
 
-    should_run, current_data = check_update()
-
-    if not should_run:
-
-        print("\n===== END =====")
-        sys.exit(0)
-
-    success = run_scraper(current_data)
-
-    # 成功時のみ previous更新
-    if success:
-
-        shutil.copy(CURRENT_FILE, PREVIOUS_FILE)
-        print("[OK] previous.json 更新完了")
-
-    else:
-
-        print("[WARN] scraper失敗 → 更新なし")
+    print("スクレイピング実行")
 
 
-# =========================================
-# 実行
-# =========================================
+    # ここに本処理を書く
+    # DB保存・通知など
+
+    # 成功したら last更新
+    with open(TODAY_FILE, "r", encoding="utf-8") as f:
+        data = json.load(f)
+
+    save_json(LAST_FILE, data)
+
+    print("[DONE]")
+
+
 if __name__ == "__main__":
-
     main()
