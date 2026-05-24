@@ -1,0 +1,68 @@
+name: Kabutan scraper_test
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "0 7 * * *"
+
+permissions:
+  contents: write
+
+jobs:
+  scrape:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      # =========================
+      # Python dependencies（完全版）
+      # =========================
+      - name: Install Python dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install selenium pandas webdriver-manager beautifulsoup4 requests
+
+      # =========================
+      # Chrome（Snap回避OK）
+      # =========================
+      - name: Install Google Chrome
+        run: |
+          wget https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb
+          sudo apt-get update
+          sudo apt-get install -y ./google-chrome-stable_current_amd64.deb
+
+      # =========================
+      # 実行
+      # =========================
+      - name: Run scraper_test
+        run: |
+          python scraper_test.py
+
+      # =========================
+      # output確認
+      # =========================
+      - name: Check output
+        run: |
+          echo "===== output ====="
+          ls -R output || true
+
+      # =========================
+      # commit
+      # =========================
+      - name: Commit results
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+
+          git add output/ || true
+          git commit -m "update scraper_test result" || echo "no changes"
+
+          git pull --rebase origin main
+          git push
