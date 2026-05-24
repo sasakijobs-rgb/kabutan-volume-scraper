@@ -8,9 +8,6 @@ def check_update():
         print("[実行] 取得失敗（続行）")
         return True, None
 
-    # =========================
-    # table部分だけ抽出
-    # =========================
     table_html = extract_table_html(html)
 
     new_hash = make_hash(table_html)
@@ -19,24 +16,24 @@ def check_update():
     print(f"[NEW HASH] {new_hash}")
     print(f"[OLD HASH] {old_hash}")
 
-    
-if __name__ == "__main__":
-    main()
-
-    # =========================
-    # 判定ロジック
-    # =========================
-
     # 初回
     if old_hash is None:
         print("[実行] ハッシュファイルなし")
         return True, new_hash
 
-    # 変更なし → 停止
+    # 変更なし
     if old_hash == new_hash:
         print("[STOP] データ変更なし → scraper停止")
         return False, None
 
-    # 変更あり → 実行
+    # 変更あり
     print("[実行] データ更新あり")
     return True, new_hash
+
+
+def main():
+    check_update()
+
+
+if __name__ == "__main__":
+    main()
