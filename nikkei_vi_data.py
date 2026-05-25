@@ -1,29 +1,5 @@
-
-自分に合った回答を得る
-
-ログインすると、保存済みチャットに基づく回答に加えて、画像作成やファイルのアップロードも利用できます。
-
-
-ログイン
-次のプログラムを参考に日経VIのページから値をスクレイピングしてください
-出力先は同じoutputフォルダへ
-必要な項目は下記で
-取得元は下記で
-https://indexes.nikkei.co.jp/nkave/index/profile?idx=nk225vi
-
-必要項目と取得テーブルは下記で
-
-【テーブル】individual-value
-日付：datedtime
-値：price
-前日比(率)：rate
-前日比(値)：diff
-始値：open_price
-始値(時)：opentime
-高値：high_price
-高値(時)：hightime
-安値：low_price
-安値(時)：lowtime
+# 取得元
+# https://indexes.nikkei.co.jp/nkave/index/profile?idx=nk225vi
 
 <div class="individual-value">
                 <div>
