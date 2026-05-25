@@ -1,7 +1,7 @@
 # ###################################
 # 日経平均ボラティリティー・インデックス
 # （上記のサイトからVI情報を取得）
-# 出力先:output/nikkei_vi_data.csv
+# 出力先:output/nikkei_vi_data.csvへ毎日追記
 # ###################################
 import requests
 from bs4 import BeautifulSoup
