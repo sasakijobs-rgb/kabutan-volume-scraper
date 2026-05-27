@@ -1,8 +1,7 @@
 import os
 import csv
 import glob
-import shutil
-from collections import defaultdict
+import re
 
 OUTPUT_DIR = "output"
 
@@ -11,111 +10,111 @@ MERGED_FILE = os.path.join(
     "trading_value_ranking_merged.csv"
 )
 
+# =========================================
+# MODE設定
+# "all" or "latest"
+# =========================================
+MODE = "all"
 
-# =========================================
-# 最新CSV取得
-# =========================================
-def get_latest_csv():
-    files = sorted(
-        glob.glob(os.path.join(
-            OUTPUT_DIR,
-            "trading_value_ranking_*.csv"
-        ))
-    )
-    return files[-1] if files else None
+LIMIT_PER_FILE = 200
 
 
 # =========================================
-# merged読み込み（既存データ取得）
+# yyyymmdd抽出
 # =========================================
-def load_existing_rows():
-    rows = []
-
-    if not os.path.exists(MERGED_FILE):
-        return rows
-
-    with open(MERGED_FILE, "r", encoding="utf-8-sig") as f:
-        reader = csv.reader(f)
-
-        header = next(reader, None)
-
-        for row in reader:
-            if len(row) < 4:
-                continue
-            rows.append(row)
-
-    return rows
+def extract_date(path):
+    m = re.search(r"(\d{8})", path)
+    return m.group(1) if m else "00000000"
 
 
 # =========================================
-# 初回作成
+# CSV一覧取得
 # =========================================
-def init_merged(latest_csv):
-    os.makedirs(OUTPUT_DIR, exist_ok=True)
-    shutil.copy(latest_csv, MERGED_FILE)
-    print("[INIT] merged作成完了（初回コピー）")
+def get_target_csv_files():
+    files = glob.glob(os.path.join(OUTPUT_DIR, "*.csv"))
+    files = [f for f in files if "merged" not in f]
+    files.sort(key=extract_date)
+    return files
 
 
 # =========================================
-# 日別200件制限 + マージ再構築
+# 重複排除
 # =========================================
-def rebuild_merged(latest_csv):
+def deduplicate(rows):
+    seen = set()
+    result = []
 
-    existing_rows = load_existing_rows()
-    new_rows = []
-
-    # 最新CSV読み込み
-    with open(latest_csv, "r", encoding="utf-8-sig") as f:
-        reader = csv.reader(f)
-        header = next(reader, None)
-
-        for row in reader:
-            if len(row) < 4:
-                continue
-            existing_rows.append(row)
-
-    # =====================================
-    # 重複排除（date + code）
-    # =====================================
-    seen_keys = set()
-    deduped = []
-
-    for row in existing_rows:
-        key = (row[0], row[3])
-        if key in seen_keys:
+    for row in rows:
+        if len(row) < 4:
             continue
-        seen_keys.add(key)
-        deduped.append(row)
 
-    # =====================================
-    # 日別グルーピング
-    # =====================================
-    grouped = defaultdict(list)
+        key = (row[0], row[3])
+        if key in seen:
+            continue
 
-    for row in deduped:
-        date = row[0]
-        grouped[date].append(row)
+        seen.add(key)
+        result.append(row)
 
-    # =====================================
-    # 日別200件制限
-    # =====================================
-    final_rows = []
+    return result
 
-    for date, rows in grouped.items():
-        final_rows.extend(rows[:200])
 
-    # =====================================
-    # 書き直し（上書き）
-    # =====================================
+# =========================================
+# ファイルから上位200件取得
+# =========================================
+def load_from_files(files):
+    all_rows = []
+    header = None
+
+    for file in files:
+        with open(file, "r", encoding="utf-8-sig") as f:
+            reader = csv.reader(f)
+
+            file_header = next(reader, None)
+            if header is None:
+                header = file_header
+
+            count = 0
+
+            for row in reader:
+                if len(row) < 4:
+                    continue
+
+                all_rows.append(row)
+                count += 1
+
+                if count >= LIMIT_PER_FILE:
+                    break
+
+    return header, all_rows
+
+
+# =========================================
+# 書き込み（上書き）
+# =========================================
+def write_all(header, rows):
     with open(MERGED_FILE, "w", newline="", encoding="utf-8-sig") as f:
         writer = csv.writer(f)
 
         if header:
             writer.writerow(header)
 
-        writer.writerows(final_rows)
+        writer.writerows(rows)
 
-    print(f"[OK] merge完了（日別200件制限） 総件数: {len(final_rows)}")
+
+# =========================================
+# 追記
+# =========================================
+def append_rows(header, rows):
+    file_exists = os.path.exists(MERGED_FILE)
+
+    with open(MERGED_FILE, "a", newline="", encoding="utf-8-sig") as f:
+        writer = csv.writer(f)
+
+        # 初回のみヘッダー
+        if not file_exists and header:
+            writer.writerow(header)
+
+        writer.writerows(rows)
 
 
 # =========================================
@@ -125,19 +124,33 @@ def run():
 
     os.makedirs(OUTPUT_DIR, exist_ok=True)
 
-    latest_csv = get_latest_csv()
+    files = get_target_csv_files()
 
-    if not latest_csv:
+    if not files:
         print("[WARN] CSVなし")
         return
 
-    # 初回
-    if not os.path.exists(MERGED_FILE):
-        init_merged(latest_csv)
-        return
+    # 最新 or 全件
+    if MODE == "latest":
+        files = [files[-1]]
 
-    # 2回目以降は再構築
-    rebuild_merged(latest_csv)
+    print(f"[INFO] MODE={MODE}, files={len(files)}")
+
+    header, rows = load_from_files(files)
+
+    # 重複排除
+    rows = deduplicate(rows)
+
+    # 出力制御
+    if MODE == "all":
+        # クリアして再生成
+        write_all(header, rows)
+        print(f"[OK] 全ファイル再生成: {len(rows)} 件")
+
+    elif MODE == "latest":
+        # 追記
+        append_rows(header, rows)
+        print(f"[OK] 最新ファイル追記: {len(rows)} 件")
 
 
 if __name__ == "__main__":
