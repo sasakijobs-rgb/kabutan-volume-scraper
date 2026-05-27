@@ -2,6 +2,7 @@ import os
 import csv
 import glob
 import shutil
+from collections import defaultdict
 
 OUTPUT_DIR = "output"
 
@@ -25,74 +26,96 @@ def get_latest_csv():
 
 
 # =========================================
-# mergedの既存キー読み込み（重複防止）
+# merged読み込み（既存データ取得）
 # =========================================
-def load_existing_keys():
-
-    keys = set()
+def load_existing_rows():
+    rows = []
 
     if not os.path.exists(MERGED_FILE):
-        return keys
+        return rows
 
     with open(MERGED_FILE, "r", encoding="utf-8-sig") as f:
         reader = csv.reader(f)
 
-        next(reader, None)  # header skip
+        header = next(reader, None)
 
         for row in reader:
             if len(row) < 4:
                 continue
+            rows.append(row)
 
-            # 日付 + コードでユニーク化
-            keys.add((row[0], row[3]))
-
-    return keys
+    return rows
 
 
 # =========================================
 # 初回作成
 # =========================================
 def init_merged(latest_csv):
-
     os.makedirs(OUTPUT_DIR, exist_ok=True)
-
-    # 初回はそのままコピー（最も安全）
     shutil.copy(latest_csv, MERGED_FILE)
-
     print("[INIT] merged作成完了（初回コピー）")
 
 
 # =========================================
-# 追記処理
+# 日別200件制限 + マージ再構築
 # =========================================
-def append_to_merged(latest_csv):
+def rebuild_merged(latest_csv):
 
-    existing = load_existing_keys()
-    added = 0
+    existing_rows = load_existing_rows()
+    new_rows = []
 
+    # 最新CSV読み込み
     with open(latest_csv, "r", encoding="utf-8-sig") as f:
         reader = csv.reader(f)
-
         header = next(reader, None)
 
-        with open(MERGED_FILE, "a", newline="", encoding="utf-8-sig") as out:
-            writer = csv.writer(out)
+        for row in reader:
+            if len(row) < 4:
+                continue
+            existing_rows.append(row)
 
-            for row in reader:
+    # =====================================
+    # 重複排除（date + code）
+    # =====================================
+    seen_keys = set()
+    deduped = []
 
-                if len(row) < 4:
-                    continue
+    for row in existing_rows:
+        key = (row[0], row[3])
+        if key in seen_keys:
+            continue
+        seen_keys.add(key)
+        deduped.append(row)
 
-                key = (row[0], row[3])
+    # =====================================
+    # 日別グルーピング
+    # =====================================
+    grouped = defaultdict(list)
 
-                if key in existing:
-                    continue
+    for row in deduped:
+        date = row[0]
+        grouped[date].append(row)
 
-                writer.writerow(row)
-                existing.add(key)
-                added += 1
+    # =====================================
+    # 日別200件制限
+    # =====================================
+    final_rows = []
 
-    print(f"[OK] merge完了 +{added}件")
+    for date, rows in grouped.items():
+        final_rows.extend(rows[:200])
+
+    # =====================================
+    # 書き直し（上書き）
+    # =====================================
+    with open(MERGED_FILE, "w", newline="", encoding="utf-8-sig") as f:
+        writer = csv.writer(f)
+
+        if header:
+            writer.writerow(header)
+
+        writer.writerows(final_rows)
+
+    print(f"[OK] merge完了（日別200件制限） 総件数: {len(final_rows)}")
 
 
 # =========================================
@@ -113,8 +136,8 @@ def run():
         init_merged(latest_csv)
         return
 
-    # 2回目以降
-    append_to_merged(latest_csv)
+    # 2回目以降は再構築
+    rebuild_merged(latest_csv)
 
 
 if __name__ == "__main__":
