@@ -127,7 +127,8 @@ def parse_page(page, start_no, today, session):
         # =========================
         if len(parts) < 10:
 
-            log(f"[SKIP] len error : {parts}")
+            #Displayが大量になるので[SKIP] len error は非表示(.logのみ出力)
+            #log(f"[SKIP] len error : {parts}")
 
             logging.info(f"[SKIP] len error : {parts}")
 
