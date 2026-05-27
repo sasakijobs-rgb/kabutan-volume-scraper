@@ -15,7 +15,7 @@ MERGED_FILE = os.path.join(
 # =========================================
 # "all(全件を上書き") or "latest(最新日のみ追記)"
 MODE = "all"
-
+# 上位200件のみ出力する
 LIMIT_PER_FILE = 200
 
 
