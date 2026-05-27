@@ -210,7 +210,7 @@ def main():
     os.makedirs("output", exist_ok=True)
 
     logging.basicConfig(
-        filename=f"output/log_{today}.log",
+        filename=f"output/data2csv_log.log",
         level=logging.INFO,
         format="%(asctime)s %(message)s",
         encoding="utf-8"
