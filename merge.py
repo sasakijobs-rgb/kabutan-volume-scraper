@@ -13,7 +13,8 @@ MERGED_FILE = os.path.join(
 # =========================================
 # MODE設定
 # =========================================
-MODE = "all"  # "all" or "latest"
+# "all(全件を上書き") or "latest(最新日のみ追記)"
+MODE = "all"
 
 LIMIT_PER_FILE = 200
 
