@@ -41,12 +41,12 @@ def main():
 
     print("\n===== scraper_test.py START =====\n")
 
-    # STEP 4
-    print("[STEP 4/4] nikkei_vi_data.py 実行")
+    # STEP 1
+    print("[STEP 1/1] merge.py 実行")
     #
-    if not run_py("nikkei_vi_data.py"):
+    if not run_py("merge.py"):
     
-        print("[ABORT] nikkei_vi_data.py 失敗")
+        print("[ABORT] merge.py 失敗")
     
         return
 
