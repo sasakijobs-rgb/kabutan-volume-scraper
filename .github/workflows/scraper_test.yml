@@ -2,8 +2,6 @@ name: Kabutan scraper_test
 
 on:
   workflow_dispatch:
-  schedule:
-    - cron: "0 7 * * *"
 
 permissions:
   contents: write
