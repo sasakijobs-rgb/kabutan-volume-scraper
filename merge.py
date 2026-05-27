@@ -14,7 +14,7 @@ MERGED_FILE = os.path.join(
 # MODE設定
 # "all" or "latest"
 # =========================================
-MODE = "all"
+MODE = "latest"
 
 LIMIT_PER_FILE = 200
 
