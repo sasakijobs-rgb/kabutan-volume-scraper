@@ -1,21 +1,15 @@
-```python
 import pandas as pd
 import glob
 import os
 from datetime import datetime
-import sys
 
 # =====================================
 # 実行パラメータ
 # python merge.py all
 # python merge.py today
 # =====================================
-
-if len(sys.argv) < 2:
-    print("使い方: python merge.py [all | today]")
-    sys.exit(1)
-
-sw = sys.argv[1].lower()
+sw = "all"
+# sw = "today"
 
 # 1ファイルあたり最大読込件数
 MAX_ROWS = 200
