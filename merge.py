@@ -173,4 +173,3 @@ elif sw == "today":
 
 else:
     print("sw は all または today を指定してください")
-```
