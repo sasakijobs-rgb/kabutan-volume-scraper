@@ -9,8 +9,8 @@ from datetime import datetime
 # python merge.py all
 # python merge.py today
 # =====================================
-sw = "all"
-# sw = "today"
+# sw = "all"
+sw = "today"
 
 # 1ファイルあたり最大読込件数
 MAX_ROWS = 200
