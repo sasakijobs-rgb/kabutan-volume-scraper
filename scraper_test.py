@@ -42,11 +42,11 @@ def main():
     print("\n===== scraper_test.py START =====\n")
 
     # STEP 1
-    print("[STEP 1/1] merge.py 実行")
+    print("[STEP 1/1] import_csv_to_supabase.py 実行")
     #
-    if not run_py("merge.py"):
+    if not run_py("import_csv_to_supabase.py"):
     
-        print("[ABORT] merge.py 失敗")
+        print("[ABORT] import_csv_to_supabase.py 失敗")
     
         return
 
