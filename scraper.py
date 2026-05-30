@@ -77,7 +77,8 @@ def main():
         if not run_py("data2csv.py"):
             print("[ABORT] data2csv失敗")
             return
-
+        print("[STEP 2.5] last_data20.csv 更新（正常終了）")
+        update_last()
 
         # =========================
         # STEP 3
@@ -95,21 +96,6 @@ def main():
 
         if not run_py("import_csv_to_supabase.py"):
             print("[WARN] Supabase反映失敗（継続）")
-
-
-    finally:
-        # =========================
-        # STEP 5（必ず実行）
-        # （last_data20は全てが正常終了時に更新）
-        # =========================
-        print("[STEP 5/5] last_data20.csv 更新")
-
-        try:
-            update_last()
-            print("[INFO] last_data20.csv 更新完了")
-        except Exception as e:
-            print(f"[ERROR] update_last失敗: {e}")
-
 
     print("\n===== scraper.py END =====\n")
     print("[DONE] 全処理終了")
