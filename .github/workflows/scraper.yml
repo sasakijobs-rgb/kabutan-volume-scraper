@@ -69,7 +69,7 @@ jobs:
 
           git pull --rebase origin main
 
-          git add -A
+          git add output/*.csv
 
           git commit -m "update scraper result" || echo "no changes"
 
