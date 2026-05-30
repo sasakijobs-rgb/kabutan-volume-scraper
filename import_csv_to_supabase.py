@@ -7,7 +7,7 @@ print(f"読み込むCSV: {csv_path}")
 df = pd.read_csv(csv_path)
 
 # =========================
-# 日本語 → 英語カラム変換（DB用）
+# 日本語 → 英語カラム
 # =========================
 df = df.rename(columns={
     "日付": "ymd",
@@ -26,7 +26,7 @@ df = df.rename(columns={
 })
 
 # =========================
-# 数値クリーニング（重要）
+# 数値クリーニング（カンマ除去）
 # =========================
 def clean_number(x):
     if pd.isna(x):
@@ -39,43 +39,34 @@ for col in ["stock_price", "diff_price", "trade_volume"]:
     df[col] = df[col].apply(clean_number)
 
 # =========================
-# 日付変換（YYYYMMDD対応）
+# 日付処理（YYYYMMDD前提）
 # =========================
-df["ymd"] = pd.to_datetime(
-    df["ymd"].astype(str),
-    format="%Y%m%d",
-    errors="coerce"
-).dt.date
+df["ymd"] = df["ymd"].astype(str)
 
-# =========================
-# 日付デバッグ
-# =========================
+# 念のため8桁チェック
+df = df[df["ymd"].str.len() == 8]
+
 print("=== 日付デバッグ ===")
-print("NaT件数:", df["ymd"].isna().sum())
 print("例:", df["ymd"].head().tolist())
 
-if df["ymd"].isna().any():
-    print("\n❌ 日付変換失敗データあり（停止）")
-    print(df[df["ymd"].isna()].head(5))
-    raise SystemExit()
-
 # =========================
-# フィルタ
+# フィルタ（YYYYMMDDのまま比較）
 # =========================
-target_date = datetime.date.today()
+target_date = datetime.date.today().strftime("%Y%m%d")
 
 mask = df["ymd"] == target_date
 passed = df[mask]
 failed = df[~mask]
 
 print("================================")
+print(f"TARGET DATE    : {target_date}")
 print(f"CSV件数        : {len(df)}")
 print(f"フィルタ後件数  : {len(passed)}")
 print(f"除外件数        : {len(failed)}")
 print("================================")
 
 # =========================
-# テスト用：1件で停止（原因表示）
+# テスト用：1件で原因表示して停止
 # =========================
 if len(failed) > 0:
     print("\n=== 除外サンプル（1件） ===")
@@ -85,13 +76,8 @@ if len(failed) > 0:
         print(f"{col}: {row[col]}")
 
     print("\n=== 追加診断 ===")
-    print("ymd dtype:", df["ymd"].dtype)
-    print("target_date:", target_date)
     print("unique dates sample:", df["ymd"].unique()[:10])
 
     raise SystemExit("❌ フィルタ不一致のため停止")
 
-# =========================
-# 成功
-# =========================
-print("✔ 正常終了（全件通過）")
+print("✔ 正常終了")
