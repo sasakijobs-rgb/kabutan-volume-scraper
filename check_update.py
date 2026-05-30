@@ -18,6 +18,13 @@ def check_update():
         return True
 
     # =========================
+    # 初回実行
+    # =========================
+    if last is None:
+        print("[INFO] 初回実行（lastなし → 更新扱い）")
+        return True
+
+    # =========================
     # ④ 完全一致チェック
     # =========================
     if last == today:
@@ -53,3 +60,10 @@ def update_last():
     if today is not None:
         save_csv(LAST_FILE, today)
         print("[INFO] last更新")
+
+if __name__ == "__main__":
+    if not check_update():
+        print("[STOP] 変更なし → 全処理停止")
+        exit(1)  # ← ここで exit code 1
+    update_last()
+    print("[DONE] last_data20.csv 更新完了")
