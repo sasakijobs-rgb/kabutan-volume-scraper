@@ -37,7 +37,7 @@ df = pd.read_csv(file_path)
 total_read = len(df)
 
 # ===============================
-# 列名をDB用に変換
+# カラム名変換
 # ===============================
 df = df.rename(columns={
     "日付": "today",
@@ -92,7 +92,7 @@ for col in numeric_cols:
         df[col] = df[col].apply(to_number)
 
 # ===============================
-# 型変換
+# rank_no / code
 # ===============================
 if "rank_no" in df.columns:
     df["rank_no"] = pd.to_numeric(df["rank_no"], errors="coerce").astype("Int64")
@@ -100,20 +100,43 @@ if "rank_no" in df.columns:
 if "code" in df.columns:
     df["code"] = df["code"].astype(str)
 
+# ===============================
+# 🔥 日付の超安全パース（ここが重要）
+# ===============================
+def parse_yyyymmdd(col):
+    col = col.astype(str).str.strip()
+    col = col.str.replace("-", "")
+    col = col.str.replace("/", "")
+    col = col.str.replace(".0", "", regex=False)
+
+    return pd.to_datetime(
+        col,
+        format="%Y%m%d",
+        errors="coerce"
+    ).dt.date
+
+
 if "today" in df.columns:
-    df["today"] = pd.to_datetime(df["today"], format="%Y%m%d", errors="coerce").dt.date
+    df["today"] = parse_yyyymmdd(df["today"])
 
 # ===============================
-# 当日データのみ抽出
+# デバッグ（重要）
+# ===============================
+print("=== 日付デバッグ ===")
+print("NaT件数:", df["today"].isna().sum())
+print("例:", df["today"].dropna().head(5).tolist())
+
+# ===============================
+# 当日フィルタ
 # ===============================
 today_date = datetime.now().date()
-df_before_filter = len(df)
 
+df_before_filter = len(df)
 df = df[df["today"] == today_date]
 df_after_filter = len(df)
 
 # ===============================
-# NaN / inf除去
+# NaN / inf処理
 # ===============================
 df = df.replace([np.inf, -np.inf], np.nan)
 df = df.astype(object).where(pd.notnull(df), None)
