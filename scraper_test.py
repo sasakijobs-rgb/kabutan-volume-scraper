@@ -39,11 +39,11 @@ def main():
     print("[STEP] check_update.py 実行")
 
     if not run_py("check_update.py"):
-        print("[ABORT] Supabase実行失敗")
+        print("[ABORT] check_update実行失敗")
         return
 
     print("\n===== scraper_test.py END =====\n")
-    print("[DONE] Supabase実行成功")
+    print("[DONE] check_update実行成功")
 
 
 if __name__ == "__main__":
