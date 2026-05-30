@@ -24,11 +24,11 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
-      - name: Run scraper_test
+      - name: Run import to Supabase
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
-        run: python scraper_test.py
+        run: python import_csv_to_supabase.py
 
       - name: Commit results
         run: |
@@ -36,6 +36,7 @@ jobs:
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
 
           git add output/ || true
+
           git commit -m "update scraper_test result" || echo "no changes"
-          git pull --rebase origin main
+
           git push
