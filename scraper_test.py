@@ -66,15 +66,6 @@ def main():
 
     print("\n===== scraper_test.py START =====\n")
 
-    # =========================
-    # ★修正ポイント（ここ）
-    # =========================
-    if not check_update():
-
-        print("[STOP] 変更なし → 全処理停止")
-        print("[ABORT] scraper_test.py 終了")
-        return
-
     # STEP 2
     print("[STEP 2/4] data2csv.py 実行")
 
