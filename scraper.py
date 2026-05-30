@@ -11,6 +11,7 @@
 # →merge.py
 # (最初だけ見出しをセット＆２ファイル目以降はデータのみ)
 # →nikkei_data_vi.csvを更新
+# →supabaseへcsvを反映する
 # →last_data20.csvを更新
 # (正常終了時のみlast～は更新されます)
 # =========================
@@ -91,12 +92,22 @@ def main():
 
 
     # STEP 4
+    #（日経Viのデータを更新）
     print("[STEP 4/4] nikkei_vi_data.py 実行")
 
     if not run_py("nikkei_vi_data.py"):
         print("[ABORT] nikkei_vi_data.py 失敗")
         return
 
+    # STEP 5
+    #（supabaseへ当日のcsvを反映する）
+    print("[STEP 1/1] import_csv_to_supabase.py 実行")
+    #
+    if not run_py("import_csv_to_supabase.py"):
+    
+        print("[ABORT] import_csv_to_supabase.py 失敗")
+    
+        return
 
     print("\n===== scraper.py END =====\n")
     print("[DONE] 全処理成功")
