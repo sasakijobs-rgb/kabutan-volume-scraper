@@ -159,7 +159,7 @@ if __name__ == "__main__":
     df = preprocess_df(df)
 
     print("================================")
-    print(":", file_path)
+    print("データのclean:", file_path)
     print("================================")
     df = clean_for_supabase(df)
 
