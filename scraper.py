@@ -95,6 +95,7 @@ def main():
     update_last()
 
     # STEP 4
+    # 日経VIをスクレイピング
     print("[STEP 4/4] nikkei_vi_data.py 実行")
 
     if not run_py("nikkei_vi_data.py"):
