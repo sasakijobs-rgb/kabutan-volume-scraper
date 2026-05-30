@@ -10,103 +10,117 @@
 # (株探のモバイル版からデータを取得）
 # →merge.py
 # (最初だけ見出しをセット＆２ファイル目以降はデータのみ)
+# →nikkei_data_vi.csvを更新
 # →last_data20.csvを更新
 # (正常終了時のみlast～は更新されます)
 # =========================
-import subprocess
-from check_update import check_update, update_last
+import requests
+from bs4 import BeautifulSoup
+import csv
+import os
+
+URL = "https://s.kabutan.jp/warnings/trading_value_ranking/?market=all&page=1"
+
+OUTPUT_DIR = "output"
+
+TODAY_FILE = os.path.join(OUTPUT_DIR, "today_data20.csv")
+LAST_FILE = os.path.join(OUTPUT_DIR, "last_data20.csv")
+
 
 # =========================================
-# subprocess実行
+# CSV保存
 # =========================================
-def run_py(script_name: str) -> bool:
+def save_csv(path, rows):
+    os.makedirs(OUTPUT_DIR, exist_ok=True)
 
-    try:
+    with open(path, "w", newline="", encoding="utf-8-sig") as f:
+        writer = csv.writer(f)
+        writer.writerows(rows)
 
-        result = subprocess.run(
-            ["python", script_name],
-            check=False
-        )
 
-        return result.returncode == 0
+# =========================================
+# CSV読み込み
+# =========================================
+def load_csv(path):
+    if not os.path.exists(path):
+        return None
 
-    except Exception as e:
+    with open(path, "r", encoding="utf-8-sig") as f:
+        return list(csv.reader(f))
 
-        print(
-            f"[ERROR] "
-            f"{script_name} "
-            f"実行失敗: {e}"
-        )
 
+# =========================================
+# データ取得
+# =========================================
+def fetch_page():
+
+    headers = {
+        "User-Agent": "Mozilla/5.0",
+        "Accept-Language": "ja,en-US;q=0.9"
+    }
+
+    r = requests.get(URL, headers=headers, timeout=30)
+
+    if r.status_code != 200:
+        print("[ERROR] status:", r.status_code)
+        return []
+
+    soup = BeautifulSoup(r.text, "html.parser")
+    rows = soup.select("table tbody tr")
+
+    data = []
+
+    for row in rows:
+        text = row.get_text(" ", strip=True)
+        text = text.replace("かぶたん プレミアム", "")
+        parts = text.split()
+
+        if len(parts) < 10:
+            continue
+
+        data.append(parts[:10])
+
+    return data
+
+
+# =========================================
+# 更新判定（scraper.pyから呼ばれる）
+# =========================================
+def check_update():
+
+    print("===== CHECK START =====")
+
+    # ① 毎回取得
+    today = fetch_page()
+
+    # ② todayは必ず保存（上書き）
+    save_csv(TODAY_FILE, today)
+    print(f"[INFO] today saved: {len(today)} rows")
+
+    # ③ last読み込み
+    last = load_csv(LAST_FILE)
+
+    # 初回
+    if last is None:
+        print("[INFO] 初回実行（lastなし）")
+        return True
+
+    # ④ 比較（ファイル同士）
+    if last == today:
+        print("[STOP] 変更なし（last == today）")
         return False
 
+    print("[RUN] 更新あり")
+    return True
+
 
 # =========================================
-# main
+# last更新（YAMLから呼ぶ）
 # =========================================
-def main():
+def update_last():
 
-    print("\n===== scraper.py START =====\n")
+    today = load_csv(TODAY_FILE)
 
-    # 更新チェック
-    if not is_updated():
-
-        print("[ABORT] scraper.py 終了")
-
-        return
-
-    # STEP 1
-    print("[STEP 1/4] cleanup.py 実行")
-    #
-    if not run_py("cleanup.py"):
-    
-        print("[ABORT] cleanup失敗")
-    
-        return
-
-    # STEP 2
-    print("[STEP 2/4] data2csv.py 実行")
-    
-    if not run_py("data2csv.py"):
-    
-        print("[ABORT] data2csv失敗")
-    
-        return
-
-    # STEP 3 →supabaseに全件入れるので不要
-    # print("[STEP 3/4] merge.py 実行")
-    # if not run_py("merge.py"):
-    #     print("[ABORT] merge.py 失敗")
-    #     return
-
-    # STEP 3
-    #   csvをDBへ反映(supabase)
-    print("[STEP 3/4] import_csv_to_supabase.py 実行")
-    if not run_py("import_csv_to_supabase.py"):
-        print("[ABORT] import_csv_to_supabase.py 失敗")
-        return
-
-    
-    # 全成功時のみ更新(check_updateで共用)
-    if not check_update():
-        print("[ABORT]")
-        exit()
-    update_last()
-
-    # STEP 4
-    # 日経VIをスクレイピング
-    print("[STEP 4/4] nikkei_vi_data.py 実行")
-
-    if not run_py("nikkei_vi_data.py"):
-
-        print("[ABORT] nikkei_vi_data.py 失敗")
-
-        return
-    
-    print("\n===== scraper.py END =====\n")
-
-    print("[DONE] 全処理成功")
-
-
-if __name__ == "__main__":
-    main()
+    if today is not None:
+        save_csv(LAST_FILE, today)
+        print("[INFO] last更新")
