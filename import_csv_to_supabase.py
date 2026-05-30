@@ -20,8 +20,8 @@ TABLE_NAME = "trading_value_ranking"
 # =========================
 # 入力CSV
 # =========================
-# inFile = "today"
-inFile = "trading_value_ranking_20260529.csv"
+inFile = "today"
+# inFile = "trading_value_ranking_20260529.csv"
 
 # =========================
 # ファイル解決
