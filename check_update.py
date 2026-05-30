@@ -115,13 +115,18 @@ def update_last():
 # =========================
 if __name__ == "__main__":
 
-    if not check_update():
-        print("[EXIT] 変更なし → 終了")
-        exit(1)
+if not check_update():
+    print("[SKIP] 変更なし → スキップ終了")
 
-    print("[OK] 更新あり → 次工程へ")
+    # スキップフラグを作る（重要）
+    os.makedirs("output", exist_ok=True)
+    with open("output/skip.flag", "w") as f:
+        f.write("skip")
 
-    # scraper.py側で本処理をやる想定
-    update_last()
+    exit(0)  # ← ここが重要（失敗にしない）
 
+print("[OK] 更新あり → 次工程へ")
+
+# scraper.py側で本処理をやる想定
+update_last()
     print("[DONE]")
