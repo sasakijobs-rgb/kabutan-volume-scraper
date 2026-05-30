@@ -1,3 +1,13 @@
+# =========================================
+# 2026/05/30 supabaseを使用するアプリしたので
+#            ～merge.csvを作るこのpyは不使用になりました。
+#  ※この時点では動くはずだが再実行するときはテストすること
+
+# PG概説
+#  trading_value_ranking_yyyymmdd.csvを結合
+#  ヘッダーは最上部に１つだけ
+#  200件のみ出力
+#  コードのパラメータで全件(更新)or今日のみ(追記)を切替可
 import pandas as pd
 import glob
 import os
@@ -6,8 +16,8 @@ from datetime import datetime
 
 # =====================================
 # 実行パラメータ
-# python merge.py all
-# python merge.py today
+#    all　・・・全件(更新)
+#  today　・・・今日のみ(追記)
 # =====================================
 # sw = "all"
 sw = "today"
