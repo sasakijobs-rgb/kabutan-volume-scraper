@@ -1,11 +1,12 @@
 import os
 import pandas as pd
+import numpy as np
 from datetime import datetime
 from supabase import create_client
 import sys
 
 # ===============================
-# Supabase設定（GitHub ActionsならSecrets経由）
+# Supabase設定
 # ===============================
 SUPABASE_URL = os.getenv("SUPABASE_URL")
 SUPABASE_KEY = os.getenv("SUPABASE_KEY")
@@ -33,19 +34,48 @@ print(f"読み込むCSV: {file_path}")
 # ===============================
 df = pd.read_csv(file_path)
 
-# 空文字やNaNをNoneに変換
-df = df.where(pd.notnull(df), None)
+# ===============================
+# 数値クリーニング関数
+# ===============================
+def to_number(x):
+    if x is None:
+        return None
 
-# 型変換
-if "rank_no" in df.columns:
-    df["rank_no"] = df["rank_no"].astype("Int64")
+    if isinstance(x, str):
+        x = x.replace(",", "").strip()
+        x = x.replace("ー倍", "")
+        x = x.replace("ー%", "")
+        x = x.replace("ー", "")
 
-if "trade_value" in df.columns:
-    df["trade_value"] = df["trade_value"].astype("Int64")
+        if x == "":
+            return None
 
-for col in ["stock_price", "diff_price", "diff_percent", "per", "pbr", "yld"]:
+    try:
+        return float(x)
+    except:
+        return None
+
+# ===============================
+# 数値列変換（安全化）
+# ===============================
+numeric_cols = ["株価", "前日差", "騰落率", "売買代金", "PER", "PBR", "配当利回り"]
+
+for col in numeric_cols:
     if col in df.columns:
-        df[col] = df[col].apply(lambda x: float(x) if x is not None else None)
+        df[col] = df[col].apply(to_number)
+
+# rank / code系（整数）
+if "順位" in df.columns:
+    df["順位"] = pd.to_numeric(df["順位"], errors="coerce").astype("Int64")
+
+if "コード" in df.columns:
+    df["コード"] = df["コード"].astype(str)
+
+# ===============================
+# NaN / inf 完全除去（重要）
+# ===============================
+df = df.replace([np.inf, -np.inf], np.nan)
+df = df.where(pd.notnull(df), None)
 
 # ===============================
 # Supabase用に辞書化
@@ -53,7 +83,7 @@ for col in ["stock_price", "diff_price", "diff_percent", "per", "pbr", "yld"]:
 records = df.to_dict(orient="records")
 
 # ===============================
-# バッチでINSERT（安全のため500件ごと）
+# バッチINSERT
 # ===============================
 batch_size = 500
 total_inserted = 0
