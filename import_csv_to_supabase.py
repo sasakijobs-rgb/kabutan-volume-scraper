@@ -132,7 +132,7 @@ print("例:", df["today"].dropna().head(5).tolist())
 today_date = datetime.now().date()
 
 df_before_filter = len(df)
-df = df[df["today"] == today_date]
+# df = df[df["today"] == today_date]
 df_after_filter = len(df)
 
 # ===============================
