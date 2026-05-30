@@ -1,6 +1,6 @@
 # =========================
 # 制御py(ここから他pyを実行する)
-# scraper.py
+# scraper_test.py
 # →last_data20.csvとtoday_data20.csvを比べる
 # (この２ファイルが同じなら全ての処理を停止する)
 # (前回・今回の１ページ目の内容を出力して比較する）
@@ -11,10 +11,25 @@
 # →merge.py
 # (最初だけ見出しをセット＆２ファイル目以降はデータのみ)
 # →nikkei_data_vi.csvを更新
-# →supabaseへcsvを反映する
 # →last_data20.csvを更新
 # (正常終了時のみlast～は更新されます)
 # =========================
+# =========================
+# 制御py(ここから他pyを実行する)
+# scraper_test.py
+# →last_data20.csvとtoday_data20.csvを比べる
+# (この２ファイルが同じなら全ての処理を停止する)
+# (前回・今回の１ページ目の内容を出力して比較する）
+# →cleanup.py
+# (ファイルが150個以上は削除)
+# →data2csv.py
+# (株探のモバイル版からデータを取得）
+# →merge.py
+# (最初だけ見出しをセット＆２ファイル目以降はデータのみ)
+# →last_data20.csvを更新
+# (正常終了時のみlast～は更新されます)
+# =========================
+
 import subprocess
 from check_update import (
     check_update,
@@ -49,22 +64,16 @@ def run_py(script_name: str) -> bool:
 # =========================================
 def main():
 
-    print("\n===== scraper.py START =====\n")
+    print("\n===== scraper_test.py START =====\n")
 
+    # =========================
+    # ★修正ポイント（ここ）
+    # =========================
     if not check_update():
 
         print("[STOP] 変更なし → 全処理停止")
-        print("[ABORT] scraper.py 終了")
+        print("[ABORT] scraper_test.py 終了")
         return
-
-
-    # STEP 1
-    print("[STEP 1/4] cleanup.py 実行")
-
-    if not run_py("cleanup.py"):
-        print("[ABORT] cleanup失敗")
-        return
-
 
     # STEP 2
     print("[STEP 2/4] data2csv.py 実行")
@@ -73,43 +82,8 @@ def main():
         print("[ABORT] data2csv失敗")
         return
 
-    # STEP 3 →supabaseに全件入れるので不要
-    # print("[STEP 3/4] merge.py 実行")
-    # if not run_py("merge.py"):
-    #     print("[ABORT] merge.py 失敗")
-    #     return
 
-    # STEP 3
-    print("[STEP 3/4] import_csv_to_supabase.py 実行")
-
-    if not run_py("import_csv_to_supabase.py"):
-        print("[ABORT] import_csv_to_supabase.py 失敗")
-        return
-
-
-    # 全成功時のみ更新
-    update_last()
-
-
-    # STEP 4
-    #（日経Viのデータを更新）
-    print("[STEP 4/4] nikkei_vi_data.py 実行")
-
-    if not run_py("nikkei_vi_data.py"):
-        print("[ABORT] nikkei_vi_data.py 失敗")
-        return
-
-    # STEP 5
-    #（supabaseへ当日のcsvを反映する）
-    print("[STEP 1/1] import_csv_to_supabase.py 実行")
-    #
-    if not run_py("import_csv_to_supabase.py"):
-    
-        print("[ABORT] import_csv_to_supabase.py 失敗")
-    
-        return
-
-    print("\n===== scraper.py END =====\n")
+    print("\n===== scraper_test.py END =====\n")
     print("[DONE] 全処理成功")
 
 
