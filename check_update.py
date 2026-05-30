@@ -34,7 +34,7 @@ def load_csv(path):
 
 
 # =========================================
-# 取得
+# データ取得
 # =========================================
 def fetch_page():
 
@@ -68,26 +68,29 @@ def fetch_page():
 
 
 # =========================================
-# 比較（ファイル同士）
+# 更新判定
 # =========================================
-def is_updated():
+def check_update():
 
-    # ① 今回取得
-    current = fetch_page()
+    print("===== START CHECK =====")
 
-    # ② today保存
-    save_csv(TODAY_FILE, current)
+    # ① 今回取得（必ず実行）
+    today = fetch_page()
+
+    # ② todayは必ず保存（比較前でもOK）
+    save_csv(TODAY_FILE, today)
+    print(f"[INFO] today saved: {len(today)} rows")
 
     # ③ last読み込み
-    old = load_csv(LAST_FILE)
+    last = load_csv(LAST_FILE)
 
-    # 初回
-    if old is None:
-        print("[INFO] 初回実行")
+    # 初回実行
+    if last is None:
+        print("[INFO] 初回実行（lastなし）→更新扱い")
         return True
 
-    # ④ ★ここが本題（ファイル比較）
-    if old == current:
+    # ④ 比較（ファイル同士）
+    if last == today:
         print("[STOP] 変更なし（last == today）")
         return False
 
@@ -96,27 +99,15 @@ def is_updated():
 
 
 # =========================================
-# last更新（成功時のみ）
-# =========================================
-def update_last():
-    today = load_csv(TODAY_FILE)
-
-    if today is not None:
-        save_csv(LAST_FILE, today)
-        print("[INFO] last更新")
-
-
-# =========================================
-# MAIN
+# 実行時チェック用
 # =========================================
 if __name__ == "__main__":
 
-    print("===== START =====")
+    result = check_update()
 
-    if not is_updated():
-        print("[ABORT]")
-        exit()
-
-    update_last()
-
-    print("===== END =====")
+    if result:
+        print("[RESULT] UPDATE REQUIRED")
+        exit(0)
+    else:
+        print("[RESULT] NO UPDATE")
+        exit(1)
