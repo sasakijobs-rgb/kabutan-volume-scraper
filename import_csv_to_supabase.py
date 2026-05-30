@@ -3,19 +3,28 @@ import numpy as np
 import re
 from datetime import datetime
 import os
-
-
-# #####################################
-# 入力ファイルパラメータ
-
-inFile = "today"
-# inFile = "trading_value_ranking_20260530.csv"
-
-# #####################################
+from supabase import create_client
 
 
 # =========================
-# ファイル解決ロジック
+# Supabase接続
+# =========================
+SUPABASE_URL = os.environ["SUPABASE_URL"]
+SUPABASE_KEY = os.environ["SUPABASE_KEY"]
+
+supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
+
+TABLE_NAME = "trading_value_ranking"
+
+
+# =========================
+# 入力CSV
+# =========================
+inFile = "today"
+
+
+# =========================
+# ファイル解決
 # =========================
 def resolve_input_file(inFile: str) -> str:
 
@@ -32,29 +41,22 @@ def resolve_input_file(inFile: str) -> str:
 
 
 # =========================
-# 数値クレンジング関数
+# 数値クレンジング（そのまま維持）
 # =========================
 def clean_financial_value(x):
-    """
-    '23.7倍' → 23.7
-    '5.2%' → 5.2
-    'ー倍' / 'ー%' → None
-    """
+
     if pd.isna(x):
         return None
 
     x = str(x).strip()
 
-    # 欠損扱い
     if "ー" in x or x in ["-", "―", "−"]:
         return None
 
-    # 単位削除
     x = x.replace("倍", "")
     x = x.replace("％", "")
     x = x.replace("%", "")
 
-    # 数値以外除去
     x = re.sub(r"[^0-9.\-]", "", x)
 
     if x == "":
@@ -67,18 +69,38 @@ def clean_financial_value(x):
 
 
 # =========================
-# ETL処理本体
+# ETL（完全版）
 # =========================
+COLUMN_MAP = {
+    "日付": "ymd",
+    "順位": "rank",
+    "銘柄名": "name",
+    "コード": "code",
+    "市場": "market",
+    "状態": "status",
+    "株価": "stock_price",
+    "前日差": "diff_price",
+    "騰落率": "diff_percent",
+    "売買代金": "trade_value",
+    "PER": "per",
+    "PBR": "pbr",
+    "配当利回り": "yld",
+}
+
+
 def preprocess_df(df: pd.DataFrame) -> pd.DataFrame:
 
-    # ---- 数値系 ----
+    # 日本語 → ローマ字
+    df = df.rename(columns=COLUMN_MAP)
+
+    # 数値系（安全変換）
     df["rank"] = pd.to_numeric(df["rank"], errors="coerce").astype("Int64")
     df["trade_value"] = pd.to_numeric(df["trade_value"], errors="coerce").astype("Int64")
 
     df["stock_price"] = pd.to_numeric(df["stock_price"], errors="coerce")
     df["diff_price"] = pd.to_numeric(df["diff_price"], errors="coerce")
 
-    # ---- 騰落率 ----
+    # 騰落率
     df["diff_percent"] = (
         df["diff_percent"]
         .astype(str)
@@ -87,48 +109,52 @@ def preprocess_df(df: pd.DataFrame) -> pd.DataFrame:
     )
     df["diff_percent"] = pd.to_numeric(df["diff_percent"], errors="coerce")
 
-    # ---- PER / PBR / YLD ----
+    # PER / PBR / YLD（元ロジック維持）
     df["per"] = df["per"].apply(clean_financial_value)
     df["pbr"] = df["pbr"].apply(clean_financial_value)
     df["yld"] = df["yld"].apply(clean_financial_value)
 
-    # ---- NULL統一 ----
-    numeric_cols = [
-        "stock_price",
-        "diff_price",
-        "diff_percent",
-        "trade_value",
-        "per",
-        "pbr",
-        "yld"
-    ]
-
-    for col in numeric_cols:
-        df[col] = df[col].replace({np.nan: None})
+    # NaN → None（Supabase対策）
+    df = df.where(pd.notnull(df), None)
 
     return df
 
 
 # =========================
-# メイン処理
+# Supabase投入
+# =========================
+def insert_to_supabase(df: pd.DataFrame):
+
+    data = df.to_dict(orient="records")
+
+    response = supabase.table(TABLE_NAME).insert(data).execute()
+
+    print("insert件数:", len(data))
+    print("レスポンス:", response)
+
+
+# =========================
+# main
 # =========================
 if __name__ == "__main__":
 
-    # ファイル決定
     file_path = resolve_input_file(inFile)
 
     print("================================")
-    print("読み込みファイル:", file_path)
+    print("読み込み:", file_path)
     print("================================")
 
-    # CSV読み込み
     df = pd.read_csv(file_path)
 
-    print("元データ件数:", len(df))
+    print("元件数:", len(df))
+    print("元カラム:", df.columns.tolist())
 
-    # 変換処理
     df = preprocess_df(df)
 
     print("================================")
-    print("✔ 変換完了（Supabase投入準備OK）")
+    print("変換後カラム:", df.columns.tolist())
     print(df.head(3))
+
+    insert_to_supabase(df)
+
+    print("DONE")
