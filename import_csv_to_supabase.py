@@ -34,9 +34,10 @@ print(f"読み込むCSV: {file_path}")
 # CSV読み込み
 # ===============================
 df = pd.read_csv(file_path)
+total_read = len(df)
 
 # ===============================
-# 列名をアルファベット化（DBに合わせる）
+# 列名をDB用に変換
 # ===============================
 df = df.rename(columns={
     "日付": "today",
@@ -55,7 +56,7 @@ df = df.rename(columns={
 })
 
 # ===============================
-# 数値変換関数（完全対応）
+# 数値変換
 # ===============================
 def to_number(x):
     if x is None:
@@ -75,9 +76,7 @@ def to_number(x):
     except:
         return None
 
-# ===============================
-# 数値列変換
-# ===============================
+
 numeric_cols = [
     "stock_price",
     "diff_price",
@@ -102,22 +101,25 @@ if "code" in df.columns:
     df["code"] = df["code"].astype(str)
 
 if "today" in df.columns:
-    df["today"] = pd.to_datetime(df["today"], format="%Y%m%d").dt.date
+    df["today"] = pd.to_datetime(df["today"], format="%Y%m%d", errors="coerce").dt.date
 
 # ===============================
 # 当日データのみ抽出
 # ===============================
 today_date = datetime.now().date()
+df_before_filter = len(df)
+
 df = df[df["today"] == today_date]
+df_after_filter = len(df)
 
 # ===============================
-# NaN / inf 完全除去（超重要）
+# NaN / inf除去
 # ===============================
 df = df.replace([np.inf, -np.inf], np.nan)
 df = df.astype(object).where(pd.notnull(df), None)
 
 # ===============================
-# records化（安全化）
+# records化
 # ===============================
 def clean(x):
     if x is None:
@@ -132,36 +134,49 @@ records = [
     for row in df.to_dict(orient="records")
 ]
 
-# ===============================
-# デバッグ（異常値検知）
-# ===============================
-for i, r in enumerate(records):
-    for k, v in r.items():
-        if isinstance(v, float) and (math.isnan(v) or math.isinf(v)):
-            print(f"BAD VALUE -> row:{i}, col:{k}, value:{v}")
-            sys.exit(1)
+total_records = len(records)
 
 # ===============================
-# Supabase upsert（重複防止、today+rank_no）
+# Supabase upsert
 # ===============================
 batch_size = 500
-total_inserted = 0
+
+success_count = 0
+error_count = 0
 
 for i in range(0, len(records), batch_size):
     batch = records[i:i+batch_size]
 
-    response = (
-        supabase
-        .table("trading_value_ranking")
-        .upsert(batch, on_conflict="today,rank_no")
-        .execute()
-    )
+    try:
+        response = (
+            supabase
+            .table("trading_value_ranking")
+            .upsert(batch, on_conflict="today,rank_no")
+            .execute()
+        )
 
-    if hasattr(response, "error") and response.error:
-        print(f"エラー: {response.error}")
-        sys.exit(1)
+        if hasattr(response, "error") and response.error:
+            print(f"エラー: {response.error}")
+            error_count += len(batch)
+            continue
 
-    total_inserted += len(batch)
-    print(f"{total_inserted} 件登録完了")
+        success_count += len(batch)
 
-print("CSVのSupabase取り込みが完了しました")
+    except Exception as e:
+        print(f"例外エラー: {e}")
+        error_count += len(batch)
+        continue
+
+    print(f"進捗: {min(i + batch_size, total_records)} / {total_records}")
+
+# ===============================
+# 最終レポート
+# ===============================
+print("================================")
+print(f"CSV読み込み件数      : {total_read}")
+print(f"フィルタ前件数        : {df_before_filter}")
+print(f"当日フィルタ後件数    : {df_after_filter}")
+print(f"アップサート対象件数  : {total_records}")
+print(f"成功件数（推定）      : {success_count}")
+print(f"失敗件数              : {error_count}")
+print("================================")
