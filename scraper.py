@@ -1,95 +1,117 @@
-import requests
-from bs4 import BeautifulSoup
-import csv
-import os
-
-URL = "https://s.kabutan.jp/warnings/trading_value_ranking/?market=all&page=1"
-
-OUTPUT_DIR = "output"
-TODAY_FILE = os.path.join(OUTPUT_DIR, "today_data20.csv")
-LAST_FILE = os.path.join(OUTPUT_DIR, "last_data20.csv")
-
-
 # =========================
-# CSV保存
+# 制御py(ここから他pyを実行する)
+# scraper.py
+# →last_data20.csvとtoday_data20.csvを比べる
+# (この２ファイルが同じなら全ての処理を停止する)
+# (前回・今回の１ページ目の内容を出力して比較する）
+# →cleanup.py
+# (ファイルが150個以上は削除)
+# →data2csv.py
+# (株探のモバイル版からデータを取得）
+# →merge.py
+# (最初だけ見出しをセット＆２ファイル目以降はデータのみ)
+# →nikkei_data_vi.csvを更新
+# →supabaseへcsvを反映する
+# →last_data20.csvを更新
+# (正常終了時のみlast～は更新されます)
 # =========================
-def save_csv(path, rows):
-    os.makedirs(OUTPUT_DIR, exist_ok=True)
-
-    with open(path, "w", newline="", encoding="utf-8-sig") as f:
-        writer = csv.writer(f)
-        writer.writerows(rows)
-
-
-# =========================
-# CSV読み込み
-# =========================
-def load_csv(path):
-    if not os.path.exists(path):
-        return None
-
-    with open(path, "r", encoding="utf-8-sig") as f:
-        return list(csv.reader(f))
+import subprocess
+from check_update import (
+    check_update,
+    update_last
+)
 
 
-# =========================
-# データ取得（安定版）
-# =========================
-def fetch_page():
-    headers = {
-        "User-Agent": "Mozilla/5.0",
-        "Accept-Language": "ja,en-US;q=0.9"
-    }
+# =========================================
+# subprocess実行
+# =========================================
+def run_py(script_name: str) -> bool:
 
-    r = requests.get(URL, headers=headers, timeout=30)
+    try:
+        result = subprocess.run(
+            ["python", script_name],
+            check=False
+        )
 
-    if r.status_code != 200:
-        print("[ERROR] status:", r.status_code)
-        return []
+        return result.returncode == 0
 
-    soup = BeautifulSoup(r.text, "html.parser")
-    rows = soup.select("table tbody tr")
-
-    data = []
-
-    for row in rows:
-        cells = [td.get_text(strip=True) for td in row.find_all("td")]
-
-        # 列数が足りない行は除外
-        if len(cells) < 10:
-            continue
-
-        data.append(cells[:10])
-
-    return data
-
-
-# =========================
-# 更新チェック（これだけ使う）
-# =========================
-def check_update():
-    print("===== CHECK START =====")
-
-    today = fetch_page()
-    save_csv(TODAY_FILE, today)
-    print(f"[INFO] today saved: {len(today)} rows")
-
-    last = load_csv(LAST_FILE)
-
-    if last is None:
-        print("[INFO] 初回実行（lastなし）")
-        return True
-
-    if last == today:
-        print("[STOP] 変更なし")
+    except Exception as e:
+        print(
+            f"[ERROR] "
+            f"{script_name} "
+            f"実行失敗: {e}"
+        )
         return False
 
-    print("[RUN] 更新あり")
-    return True
+
+# =========================================
+# main
+# =========================================
+def main():
+
+    print("\n===== scraper.py START =====\n")
+
+    if not check_update():
+
+        print("[STOP] 変更なし → 全処理停止")
+        print("[ABORT] scraper.py 終了")
+        return
 
 
-# =========================
-# 実行
-# =========================
+    # STEP 1
+    print("[STEP 1/4] cleanup.py 実行")
+
+    if not run_py("cleanup.py"):
+        print("[ABORT] cleanup失敗")
+        return
+
+
+    # STEP 2
+    print("[STEP 2/4] data2csv.py 実行")
+
+    if not run_py("data2csv.py"):
+        print("[ABORT] data2csv失敗")
+        return
+
+    # STEP 3 →supabaseに全件入れるので不要
+    # print("[STEP 3/4] merge.py 実行")
+    # if not run_py("merge.py"):
+    #     print("[ABORT] merge.py 失敗")
+    #     return
+
+    # STEP 3
+    print("[STEP 3/4] import_csv_to_supabase.py 実行")
+
+    if not run_py("import_csv_to_supabase.py"):
+        print("[ABORT] import_csv_to_supabase.py 失敗")
+        return
+
+
+    # 全成功時のみ更新
+    update_last()
+
+
+    # STEP 4
+    #（日経Viのデータを更新）
+    print("[STEP 4/4] nikkei_vi_data.py 実行")
+
+    if not run_py("nikkei_vi_data.py"):
+        print("[ABORT] nikkei_vi_data.py 失敗")
+        return
+
+    # STEP 5
+    #（supabaseへ当日のcsvを反映する）
+    print("[STEP 1/1] import_csv_to_supabase.py 実行")
+    #
+    if not run_py("import_csv_to_supabase.py"):
+    
+        print("[ABORT] import_csv_to_supabase.py 失敗")
+    
+        return
+
+    print("\n===== scraper.py END =====\n")
+    print("[DONE] 全処理成功")
+
+
 if __name__ == "__main__":
-    check_update()
+    main()
