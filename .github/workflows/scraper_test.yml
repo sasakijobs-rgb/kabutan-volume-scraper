@@ -47,12 +47,12 @@ jobs:
       # =========================
       # 実行
       # =========================
-      - name: Run scraper
+      - name: Run scraper_test
         env:
            SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
            SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
         run: |
-          python scraper.py
+          python scraper_test.py
           
       # =========================
       # output確認(上記のマーカー以降のみ表示)
