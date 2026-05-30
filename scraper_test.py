@@ -14,22 +14,6 @@
 # →last_data20.csvを更新
 # (正常終了時のみlast～は更新されます)
 # =========================
-# =========================
-# 制御py(ここから他pyを実行する)
-# scraper_test.py
-# →last_data20.csvとtoday_data20.csvを比べる
-# (この２ファイルが同じなら全ての処理を停止する)
-# (前回・今回の１ページ目の内容を出力して比較する）
-# →cleanup.py
-# (ファイルが150個以上は削除)
-# →data2csv.py
-# (株探のモバイル版からデータを取得）
-# →merge.py
-# (最初だけ見出しをセット＆２ファイル目以降はデータのみ)
-# →last_data20.csvを更新
-# (正常終了時のみlast～は更新されます)
-# =========================
-
 import subprocess
 from check_update import (
     check_update,
@@ -67,10 +51,10 @@ def main():
     print("\n===== scraper_test.py START =====\n")
 
     # STEP 2
-    print("[STEP 2/4] check_update 実行")
+    print("[STEP 2/4] import_csv_to_supabase.py 実行")
 
-    if not run_py("check_update.py"):
-        print("[ABORT] check_update.py失敗")
+    if not run_py("import_csv_to_supabase.py"):
+        print("[ABORT] import_csv_to_supabase.py失敗")
         return
 
     print("\n===== scraper_test.py END =====\n")
