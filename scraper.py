@@ -77,15 +77,20 @@ def main():
     
         return
 
+    # STEP 3 →supabaseに全件入れるので不要
+    # print("[STEP 3/4] merge.py 実行")
+    # if not run_py("merge.py"):
+    #     print("[ABORT] merge.py 失敗")
+    #     return
+
     # STEP 3
-    print("[STEP 3/4] merge.py 実行")
-
-    if not run_py("merge.py"):
-
-        print("[ABORT] merge.py 失敗")
-
+    #   csvをDBへ反映(supabase)
+    print("[STEP 3/4] import_csv_to_supabase.py 実行")
+    if not run_py("import_csv_to_supabase.py"):
+        print("[ABORT] import_csv_to_supabase.py 失敗")
         return
 
+    
     # 全成功時のみ更新
     update_last()
 
