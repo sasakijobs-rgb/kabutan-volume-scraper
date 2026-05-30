@@ -68,25 +68,25 @@ def fetch_page():
 
 
 # =========================================
-# 更新判定
+# 更新判定（scraper.pyから呼ばれる）
 # =========================================
 def check_update():
 
-    print("===== START CHECK =====")
+    print("===== CHECK START =====")
 
-    # ① 今回取得（必ず実行）
+    # ① 毎回取得
     today = fetch_page()
 
-    # ② todayは必ず保存（比較前でもOK）
+    # ② todayは必ず保存（上書き）
     save_csv(TODAY_FILE, today)
     print(f"[INFO] today saved: {len(today)} rows")
 
     # ③ last読み込み
     last = load_csv(LAST_FILE)
 
-    # 初回実行
+    # 初回
     if last is None:
-        print("[INFO] 初回実行（lastなし）→更新扱い")
+        print("[INFO] 初回実行（lastなし）")
         return True
 
     # ④ 比較（ファイル同士）
@@ -99,15 +99,12 @@ def check_update():
 
 
 # =========================================
-# 実行時チェック用
+# last更新（YAMLから呼ぶ）
 # =========================================
-if __name__ == "__main__":
+def update_last():
 
-    result = check_update()
+    today = load_csv(TODAY_FILE)
 
-    if result:
-        print("[RESULT] UPDATE REQUIRED")
-        exit(0)
-    else:
-        print("[RESULT] NO UPDATE")
-        exit(1)
+    if today is not None:
+        save_csv(LAST_FILE, today)
+        print("[INFO] last更新")
