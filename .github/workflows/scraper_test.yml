@@ -37,6 +37,14 @@ jobs:
           sudo apt-get install -y ./google-chrome-stable_current_amd64.deb
 
       # =========================
+      # 処理前マーカー(処理時に更新あったファイルを表示)
+      # =========================
+      - name: Create start marker
+        run: |
+          date
+          touch /tmp/job_start_marker
+
+      # =========================
       # 実行
       # =========================
       - name: Run scraper_test
