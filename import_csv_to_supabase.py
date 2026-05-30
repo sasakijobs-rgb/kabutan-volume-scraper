@@ -6,7 +6,7 @@ print(f"読み込むCSV: {csv_path}")
 df = pd.read_csv(csv_path)
 
 # =========================
-# 日本語 → 英語カラム変換
+# 日本語 → 英語カラム変換（DB用）
 # =========================
 df = df.rename(columns={
     "日付": "ymd",
@@ -25,7 +25,7 @@ df = df.rename(columns={
 })
 
 # =========================
-# 数値クリーニング
+# 数値クリーニング（カンマ除去）
 # =========================
 def clean_number(x):
     if pd.isna(x):
@@ -38,7 +38,7 @@ for col in ["stock_price", "diff_price", "trade_volume"]:
     df[col] = df[col].apply(clean_number)
 
 # =========================
-# 日付（そのまま保持・チェックのみ）
+# 文字列として保持（YYYYMMDD）
 # =========================
 df["ymd"] = df["ymd"].astype(str)
 
@@ -47,7 +47,8 @@ print(df["ymd"].head().tolist())
 print("ユニーク数:", df["ymd"].nunique())
 
 # =========================
-# ❌ フィルタなし（ここが重要）
+# フィルタ（必要なら使用）
+# ※今は全件通す想定
 # =========================
 passed = df
 
@@ -57,9 +58,31 @@ print(f"処理対象件数    : {len(passed)}")
 print("================================")
 
 # =========================
-# テスト用（1件確認）
+# DB投入直前で date型へ変換
+# =========================
+passed["ymd"] = pd.to_datetime(
+    passed["ymd"],
+    format="%Y%m%d",
+    errors="coerce"
+).dt.date
+
+# =========================
+# 変換チェック（安全策）
+# =========================
+if passed["ymd"].isna().any():
+    print("❌ 日付変換失敗あり（停止）")
+    print(passed[passed["ymd"].isna()].head())
+    raise SystemExit()
+
+# =========================
+# サンプル表示
 # =========================
 print("\n=== サンプル1件 ===")
 print(passed.iloc[0].to_dict())
 
-print("✔ フィルタなしで正常終了")
+# =========================
+# Supabase用データ化
+# =========================
+records = passed.to_dict(orient="records")
+
+print("\n✔ 変換完了（Supabase投入準備OK）")
