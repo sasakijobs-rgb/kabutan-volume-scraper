@@ -104,6 +104,7 @@ def preprocess_df(df: pd.DataFrame) -> pd.DataFrame:
             df[col]
             .astype(str)
             .str.replace(",", "", regex=False)
+            .str.replace("+", "", regex=False)
         )
 
     # 数値系（安全変換）
