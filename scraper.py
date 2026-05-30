@@ -15,7 +15,7 @@
 # =========================
 import subprocess
 from check_update import (
-    check_updated,
+    check_update,
     update_last
 )
 
