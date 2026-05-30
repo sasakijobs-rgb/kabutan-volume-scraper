@@ -10,12 +10,9 @@
 # →supabaseへcsvを反映する
 # →last_data20.csvを更新(全てが正常終了時のみ)
 # =========================
+import os
 import subprocess
-from check_update import (
-    check_update,
-    update_last
-)
-
+from check_update import check_update, update_last
 
 # =========================================
 # subprocess実行
@@ -50,6 +47,11 @@ def main():
 
     print("\n===== scraper.py START =====\n")
 
+    # skip判定
+    if os.path.exists("output/skip.flag"):
+        print("[SKIP] 更新なしフラグ検出 → scraper停止")
+        return
+        
     # =========================
     # 更新チェック
     # =========================
