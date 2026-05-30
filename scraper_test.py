@@ -67,10 +67,10 @@ def main():
     print("\n===== scraper_test.py START =====\n")
 
     # STEP 2
-    print("[STEP 2/4] data2csv.py 実行")
+    print("[STEP 2/4] nikkei_vi_data.py 実行")
 
-    if not run_py("data2csv.py"):
-        print("[ABORT] data2csv失敗")
+    if not run_py("nikkei_vi_data.py"):
+        print("[ABORT] nikkei_vi_data.py失敗")
         return
 
 
