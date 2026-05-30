@@ -1,24 +1,10 @@
 # =========================
-# 制御py(ここから他pyを実行する)
+# 制御py（Supabaseテスト専用）
 # scraper_test.py
-# →last_data20.csvとtoday_data20.csvを比べる
-# (この２ファイルが同じなら全ての処理を停止する)
-# (前回・今回の１ページ目の内容を出力して比較する）
-# →cleanup.py
-# (ファイルが150個以上は削除)
-# →data2csv.py
-# (株探のモバイル版からデータを取得）
-# →merge.py
-# (最初だけ見出しをセット＆２ファイル目以降はデータのみ)
-# →nikkei_data_vi.csvを更新
-# →last_data20.csvを更新
-# (正常終了時のみlast～は更新されます)
+# →import_csv_to_supabase.pyのみ実行
 # =========================
+
 import subprocess
-from check_update import (
-    check_update,
-    update_last
-)
 
 
 # =========================================
@@ -32,14 +18,14 @@ def run_py(script_name: str) -> bool:
             check=False
         )
 
-        return result.returncode == 0
+        if result.returncode != 0:
+            print(f"[ERROR] {script_name} 終了コード: {result.returncode}")
+            return False
+
+        return True
 
     except Exception as e:
-        print(
-            f"[ERROR] "
-            f"{script_name} "
-            f"実行失敗: {e}"
-        )
+        print(f"[ERROR] {script_name} 実行失敗: {e}")
         return False
 
 
@@ -50,15 +36,14 @@ def main():
 
     print("\n===== scraper_test.py START =====\n")
 
-    # STEP 2
-    print("[STEP 2/4] import_csv_to_supabase.py 実行")
+    print("[STEP] import_csv_to_supabase.py 実行")
 
     if not run_py("import_csv_to_supabase.py"):
-        print("[ABORT] import_csv_to_supabase.py失敗")
+        print("[ABORT] Supabase実行失敗")
         return
 
     print("\n===== scraper_test.py END =====\n")
-    print("[DONE] 全処理成功")
+    print("[DONE] Supabase実行成功")
 
 
 if __name__ == "__main__":
