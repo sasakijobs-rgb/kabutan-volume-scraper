@@ -1,88 +1,101 @@
 import pandas as pd
+import numpy as np
+import re
 
-csv_path = "output/trading_value_ranking_20260530.csv"
-print(f"読み込むCSV: {csv_path}")
-
-df = pd.read_csv(csv_path)
 
 # =========================
-# 日本語 → 英語カラム変換（DB用）
+# ① 数値クレンジング関数
 # =========================
-df = df.rename(columns={
-    "日付": "ymd",
-    "順位": "rank",
-    "銘柄名": "name",
-    "コード": "code",
-    "市場": "market",
-    "状態": "status",
-    "株価": "stock_price",
-    "前日差": "diff_price",
-    "騰落率": "diff_percent",
-    "売買代金": "trade_volume",
-    "PER": "per",
-    "PBR": "pbr",
-    "配当利回り": "yld",
-})
-
-# =========================
-# 数値クリーニング（カンマ除去）
-# =========================
-def clean_number(x):
+def clean_financial_value(x):
+    """
+    ・'23.7倍' → 23.7
+    ・'5.2%' / '5.2％' → 5.2
+    ・'ー倍' / 'ー%' → None
+    """
     if pd.isna(x):
         return None
-    if isinstance(x, str):
-        return x.replace(",", "")
-    return x
 
-for col in ["stock_price", "diff_price", "trade_volume"]:
-    df[col] = df[col].apply(clean_number)
+    x = str(x).strip()
 
-# =========================
-# 文字列として保持（YYYYMMDD）
-# =========================
-df["ymd"] = df["ymd"].astype(str)
+    # 欠損表現
+    if "ー" in x or x in ["-", "―", "−"]:
+        return None
 
-print("=== 日付サンプル ===")
-print(df["ymd"].head().tolist())
-print("ユニーク数:", df["ymd"].nunique())
+    # 単位除去
+    x = x.replace("倍", "")
+    x = x.replace("％", "")
+    x = x.replace("%", "")
 
-# =========================
-# フィルタ（必要なら使用）
-# ※今は全件通す想定
-# =========================
-passed = df
+    # 数値以外を除去
+    x = re.sub(r"[^0-9.\-]", "", x)
 
-print("================================")
-print(f"CSV件数        : {len(df)}")
-print(f"処理対象件数    : {len(passed)}")
-print("================================")
+    if x == "":
+        return None
+
+    try:
+        return float(x)
+    except:
+        return None
+
 
 # =========================
-# DB投入直前で date型へ変換
+# ② メイン変換処理（軽量版）
 # =========================
-passed["ymd"] = pd.to_datetime(
-    passed["ymd"],
-    format="%Y%m%d",
-    errors="coerce"
-).dt.date
+def preprocess_df(df: pd.DataFrame) -> pd.DataFrame:
+
+    # ---- 数値（整数系）----
+    df["rank"] = pd.to_numeric(df["rank"], errors="coerce").astype("Int64")
+    df["trade_value"] = pd.to_numeric(df["trade_value"], errors="coerce").astype("Int64")
+
+    # ---- 株価系 ----
+    df["stock_price"] = pd.to_numeric(df["stock_price"], errors="coerce")
+    df["diff_price"] = pd.to_numeric(df["diff_price"], errors="coerce")
+
+    # ---- 騰落率（%除去）----
+    df["diff_percent"] = (
+        df["diff_percent"]
+        .astype(str)
+        .str.replace("%", "", regex=False)
+        .str.replace("％", "", regex=False)
+    )
+    df["diff_percent"] = pd.to_numeric(df["diff_percent"], errors="coerce")
+
+    # ---- PER / PBR / YLD ----
+    df["per"] = df["per"].apply(clean_financial_value)
+    df["pbr"] = df["pbr"].apply(clean_financial_value)
+    df["yld"] = df["yld"].apply(clean_financial_value)
+
+    # =========================
+    # ③ 最終NULL統一
+    # =========================
+    numeric_cols = [
+        "stock_price",
+        "diff_price",
+        "diff_percent",
+        "trade_value",
+        "per",
+        "pbr",
+        "yld"
+    ]
+
+    for col in numeric_cols:
+        df[col] = df[col].replace({np.nan: None})
+
+    return df
+
 
 # =========================
-# 変換チェック（安全策）
+# ③ 使用例
 # =========================
-if passed["ymd"].isna().any():
-    print("❌ 日付変換失敗あり（停止）")
-    print(passed[passed["ymd"].isna()].head())
-    raise SystemExit()
+if __name__ == "__main__":
 
-# =========================
-# サンプル表示
-# =========================
-print("\n=== サンプル1件 ===")
-print(passed.iloc[0].to_dict())
+    df = pd.read_csv("output/trading_value_ranking_20260530.csv")
 
-# =========================
-# Supabase用データ化
-# =========================
-records = passed.to_dict(orient="records")
+    print("変換前件数:", len(df))
 
-print("\n✔ 変換完了（Supabase投入準備OK）")
+    df = preprocess_df(df)
+
+    print("変換後サンプル:")
+    print(df.head(3))
+
+    print("✔ Supabase投入準備完了（日時処理なし）")
