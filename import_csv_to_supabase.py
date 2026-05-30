@@ -19,7 +19,7 @@ if not SUPABASE_URL or not SUPABASE_KEY:
 supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
 
 # ===============================
-# CSVファイル
+# CSVパス
 # ===============================
 today_str = datetime.now().strftime("%Y%m%d")
 file_path = f"output/trading_value_ranking_{today_str}.csv"
@@ -36,18 +36,45 @@ print(f"読み込むCSV: {file_path}")
 df = pd.read_csv(file_path)
 
 # ===============================
-# DBに存在する列だけに制限（重要）
+# 日本語 → 英語カラム変換
+# ===============================
+df = df.rename(columns={
+    "日付": "today",
+    "順位": "rank_no",
+    "銘柄名": "name",
+    "コード": "code",
+    "市場": "market",
+    "状態": "status",
+    "株価": "stock_price",
+    "前日差": "diff_price",
+    "騰落率": "diff_percent",
+    "売買代金": "trade_value",
+    "配当利回り": "yld"
+})
+
+# ===============================
+# DBカラム以外を除外
 # ===============================
 db_columns = [
-    "日付", "順位", "銘柄名", "コード", "市場", "状態",
-    "株価", "前日差", "騰落率", "売買代金",
-    "PER", "PBR", "配当利回り"
+    "today",
+    "rank_no",
+    "name",
+    "code",
+    "market",
+    "status",
+    "stock_price",
+    "diff_price",
+    "diff_percent",
+    "trade_value",
+    "per",
+    "pbr",
+    "yld"
 ]
 
 df = df[[c for c in df.columns if c in db_columns]]
 
 # ===============================
-# 数値変換関数（完全対応）
+# 数値変換関数
 # ===============================
 def to_number(x):
     if x is None:
@@ -74,13 +101,13 @@ def to_number(x):
 # 数値列変換
 # ===============================
 numeric_cols = [
-    "株価",
-    "前日差",
-    "騰落率",
-    "売買代金",
-    "PER",
-    "PBR",
-    "配当利回り"
+    "stock_price",
+    "diff_price",
+    "diff_percent",
+    "trade_value",
+    "per",
+    "pbr",
+    "yld"
 ]
 
 for col in numeric_cols:
@@ -88,38 +115,29 @@ for col in numeric_cols:
         df[col] = df[col].apply(to_number)
 
 # ===============================
-# 型変換
+# rank_no型変換
 # ===============================
-if "順位" in df.columns:
-    df["順位"] = pd.to_numeric(df["順位"], errors="coerce").astype("Int64")
-
-if "コード" in df.columns:
-    df["コード"] = df["コード"].astype(str)
+if "rank_no" in df.columns:
+    df["rank_no"] = pd.to_numeric(df["rank_no"], errors="coerce").astype("Int64")
 
 # ===============================
-# NaN / inf 完全除去（超重要）
+# id列は送らない（DB管理）
+# ===============================
+df = df.drop(columns=["id"], errors="ignore")
+
+# ===============================
+# NaN / inf除去
 # ===============================
 df = df.replace([np.inf, -np.inf], np.nan)
 df = df.astype(object).where(pd.notnull(df), None)
 
 # ===============================
-# records化（安全化）
+# records化
 # ===============================
-def clean(x):
-    if x is None:
-        return None
-    if isinstance(x, float):
-        if math.isnan(x) or math.isinf(x):
-            return None
-    return x
-
-records = [
-    {k: clean(v) for k, v in row.items()}
-    for row in df.to_dict(orient="records")
-]
+records = df.to_dict(orient="records")
 
 # ===============================
-# デバッグ（異常値検知）
+# 最終チェック（デバッグ用）
 # ===============================
 for i, r in enumerate(records):
     for k, v in r.items():
