@@ -1,49 +1,40 @@
 # =========================
-# 制御py（Supabaseテスト専用）
-# scraper_test.py
-# →import_csv_to_supabase.pyのみ実行
+# 制御py（最小構成）
 # =========================
-
-import subprocess
-
-
-# =========================================
-# subprocess実行
-# =========================================
-def run_py(script_name: str) -> bool:
-
-    try:
-        result = subprocess.run(
-            ["python", script_name],
-            check=False
-        )
-
-        if result.returncode != 0:
-            print(f"[ERROR] {script_name} 終了コード: {result.returncode}")
-            return False
-
-        return True
-
-    except Exception as e:
-        print(f"[ERROR] {script_name} 実行失敗: {e}")
-        return False
+from check_update import (
+    check_update,
+    update_last
+)
 
 
-# =========================================
+# =========================
 # main
-# =========================================
+# =========================
 def main():
 
-    print("\n===== check_update.py START =====\n")
+    print("\n===== scraper.py START =====\n")
 
-    print("[STEP] check_update.py 実行")
-
-    if not run_py("check_update.py"):
-        print("[ABORT] check_update実行失敗")
+    # =========================
+    # 更新チェックのみ実行
+    # =========================
+    if not check_update():
+        print("[STOP] 変更なし → 全処理停止")
+        print("[ABORT] scraper.py 終了")
         return
 
-    print("\n===== scraper_test.py END =====\n")
-    print("[DONE] check_update実行成功")
+    # =========================
+    # 更新ありのみ last 更新
+    # =========================
+    try:
+        update_last()
+        print("[INFO] last_data20.csv 更新完了")
+
+    except Exception as e:
+        print(f"[ERROR] update_last失敗: {e}")
+        return
+
+    print("\n===== scraper.py END =====\n")
+    print("[DONE] check + update_last 完了")
 
 
 if __name__ == "__main__":
