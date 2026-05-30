@@ -56,12 +56,8 @@ def main():
     # 更新チェック
     # =========================
     if not check_update():
-
         print("[STOP] 変更なし → 全処理停止")
-        print("[ABORT] scraper.py 終了")
         return
-
-
     try:
         # =========================
         # STEP 1
