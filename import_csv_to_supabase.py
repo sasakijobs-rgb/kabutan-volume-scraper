@@ -119,7 +119,14 @@ def preprocess_df(df: pd.DataFrame) -> pd.DataFrame:
 
     return df
 
-
+# =========================
+# # NaN / NA / inf を完全排除
+# =========================
+def clean_for_supabase(df):
+    df = df.copy()
+    df = df.replace([np.nan, np.inf, -np.inf], None)
+    return df
+    
 # =========================
 # Supabase投入
 # =========================
