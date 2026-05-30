@@ -1,7 +1,7 @@
 import os
 import pandas as pd
 import numpy as np
-from datetime import datetime
+from datetime import datetime, date
 from supabase import create_client
 import sys
 import math
@@ -34,7 +34,6 @@ print(f"読み込むCSV: {file_path}")
 # CSV読み込み
 # ===============================
 df = pd.read_csv(file_path)
-total_read = len(df)
 
 # ===============================
 # カラム名変換
@@ -92,7 +91,7 @@ for col in numeric_cols:
         df[col] = df[col].apply(to_number)
 
 # ===============================
-# rank_no / code
+# 型変換
 # ===============================
 if "rank_no" in df.columns:
     df["rank_no"] = pd.to_numeric(df["rank_no"], errors="coerce").astype("Int64")
@@ -101,38 +100,34 @@ if "code" in df.columns:
     df["code"] = df["code"].astype(str)
 
 # ===============================
-# 🔥 日付の超安全パース（ここが重要）
+# 日付変換（安全版）
 # ===============================
-def parse_yyyymmdd(col):
+def parse_date(col):
     col = col.astype(str).str.strip()
     col = col.str.replace("-", "")
     col = col.str.replace("/", "")
     col = col.str.replace(".0", "", regex=False)
 
-    return pd.to_datetime(
-        col,
-        format="%Y%m%d",
-        errors="coerce"
-    ).dt.date
+    return pd.to_datetime(col, format="%Y%m%d", errors="coerce").dt.date
 
 
 if "today" in df.columns:
-    df["today"] = parse_yyyymmdd(df["today"])
+    df["today"] = parse_date(df["today"])
 
 # ===============================
-# デバッグ（重要）
+# デバッグ
 # ===============================
 print("=== 日付デバッグ ===")
 print("NaT件数:", df["today"].isna().sum())
 print("例:", df["today"].dropna().head(5).tolist())
 
 # ===============================
-# 当日フィルタ
+# フィルタ（必要なら残す）
 # ===============================
 today_date = datetime.now().date()
 
 df_before_filter = len(df)
-# df = df[df["today"] == today_date]
+df = df[df["today"] == today_date]
 df_after_filter = len(df)
 
 # ===============================
@@ -142,22 +137,31 @@ df = df.replace([np.inf, -np.inf], np.nan)
 df = df.astype(object).where(pd.notnull(df), None)
 
 # ===============================
-# records化
+# JSON安全化（重要修正ポイント）
 # ===============================
 def clean(x):
     if x is None:
         return None
+
     if isinstance(x, float):
         if math.isnan(x) or math.isinf(x):
             return None
+
+    # pandas timestamp
+    if isinstance(x, pd.Timestamp):
+        return x.isoformat()
+
+    # datetime.date / datetime.datetime
+    if isinstance(x, (datetime, date)):
+        return x.isoformat()
+
     return x
+
 
 records = [
     {k: clean(v) for k, v in row.items()}
     for row in df.to_dict(orient="records")
 ]
-
-total_records = len(records)
 
 # ===============================
 # Supabase upsert
@@ -190,16 +194,15 @@ for i in range(0, len(records), batch_size):
         error_count += len(batch)
         continue
 
-    print(f"進捗: {min(i + batch_size, total_records)} / {total_records}")
+    print(f"進捗: {min(i + batch_size, len(records))} / {len(records)}")
 
 # ===============================
 # 最終レポート
 # ===============================
 print("================================")
-print(f"CSV読み込み件数      : {total_read}")
+print(f"CSV件数              : {len(records)}")
 print(f"フィルタ前件数        : {df_before_filter}")
-print(f"当日フィルタ後件数    : {df_after_filter}")
-print(f"アップサート対象件数  : {total_records}")
-print(f"成功件数（推定）      : {success_count}")
+print(f"フィルタ後件数        : {df_after_filter}")
+print(f"成功件数              : {success_count}")
 print(f"失敗件数              : {error_count}")
 print("================================")
