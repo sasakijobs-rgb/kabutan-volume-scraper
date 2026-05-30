@@ -34,11 +34,11 @@ def run_py(script_name: str) -> bool:
 # =========================================
 def main():
 
-    print("\n===== scraper_test.py START =====\n")
+    print("\n===== check_update.py START =====\n")
 
-    print("[STEP] import_csv_to_supabase.py 実行")
+    print("[STEP] check_update.py 実行")
 
-    if not run_py("import_csv_to_supabase.py"):
+    if not run_py("check_update.py"):
         print("[ABORT] Supabase実行失敗")
         return
 
