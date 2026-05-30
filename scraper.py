@@ -14,11 +14,7 @@
 # (正常終了時のみlast～は更新されます)
 # =========================
 import subprocess
-from check_update import (
-    check_update,
-    update_last
-)
-
+from check_update import check_update, update_last
 
 # =========================================
 # subprocess実行
@@ -91,7 +87,10 @@ def main():
         return
 
     
-    # 全成功時のみ更新
+    # 全成功時のみ更新(check_updateで共用)
+    if not check_update():
+        print("[ABORT]")
+        exit()
     update_last()
 
     # STEP 4
