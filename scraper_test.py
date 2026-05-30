@@ -67,12 +67,11 @@ def main():
     print("\n===== scraper_test.py START =====\n")
 
     # STEP 2
-    print("[STEP 2/4] nikkei_vi_data.py 実行")
+    print("[STEP 2/4] check_update 実行")
 
-    if not run_py("nikkei_vi_data.py"):
-        print("[ABORT] nikkei_vi_data.py失敗")
+    if not run_py("check_update.py"):
+        print("[ABORT] check_update.py失敗")
         return
-
 
     print("\n===== scraper_test.py END =====\n")
     print("[DONE] 全処理成功")
