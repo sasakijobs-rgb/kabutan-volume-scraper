@@ -128,16 +128,6 @@ def clean_for_supabase(df):
     return df
 
 # =========================
-# NaN / NA / inf / -inf を完全に None に置換
-# =========================
-def clean_for_supabase(df):
-    df = df.copy()
-    
-    df = df.replace([np.nan, np.inf, -np.inf], None)
-    return df
-    
-
-# =========================
 # Supabase投入
 # =========================
 def insert_to_supabase(df: pd.DataFrame):
@@ -168,6 +158,12 @@ if __name__ == "__main__":
 
     df = preprocess_df(df)
 
+    print("================================")
+    print(":", file_path)
+    print("================================")
+    df = clean_for_supabase(df)
+
+    
     print("================================")
     print("変換後カラム:", df.columns.tolist())
     print(df.head(3))
