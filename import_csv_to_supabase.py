@@ -19,7 +19,7 @@ if not SUPABASE_URL or not SUPABASE_KEY:
 supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
 
 # ===============================
-# CSVパス
+# CSVファイル
 # ===============================
 today_str = datetime.now().strftime("%Y%m%d")
 file_path = f"output/trading_value_ranking_{today_str}.csv"
@@ -36,7 +36,7 @@ print(f"読み込むCSV: {file_path}")
 df = pd.read_csv(file_path)
 
 # ===============================
-# 日本語 → 英語カラム変換
+# 列名をアルファベット化（DBに合わせる）
 # ===============================
 df = df.rename(columns={
     "日付": "today",
@@ -49,32 +49,13 @@ df = df.rename(columns={
     "前日差": "diff_price",
     "騰落率": "diff_percent",
     "売買代金": "trade_value",
+    "PER": "per",
+    "PBR": "pbr",
     "配当利回り": "yld"
 })
 
 # ===============================
-# DBカラム以外を除外
-# ===============================
-db_columns = [
-    "today",
-    "rank_no",
-    "name",
-    "code",
-    "market",
-    "status",
-    "stock_price",
-    "diff_price",
-    "diff_percent",
-    "trade_value",
-    "per",
-    "pbr",
-    "yld"
-]
-
-df = df[[c for c in df.columns if c in db_columns]]
-
-# ===============================
-# 数値変換関数
+# 数値変換関数（完全対応）
 # ===============================
 def to_number(x):
     if x is None:
@@ -85,10 +66,7 @@ def to_number(x):
             return None
 
     if isinstance(x, str):
-        x = x.replace(",", "").strip()
-        x = x.replace("ー倍", "")
-        x = x.replace("ー%", "")
-        x = x.replace("ー", "")
+        x = x.replace(",", "").replace("%", "").replace("ー倍", "").replace("ー%", "").strip()
         if x == "":
             return None
 
@@ -115,29 +93,47 @@ for col in numeric_cols:
         df[col] = df[col].apply(to_number)
 
 # ===============================
-# rank_no型変換
+# 型変換
 # ===============================
 if "rank_no" in df.columns:
     df["rank_no"] = pd.to_numeric(df["rank_no"], errors="coerce").astype("Int64")
 
-# ===============================
-# id列は送らない（DB管理）
-# ===============================
-df = df.drop(columns=["id"], errors="ignore")
+if "code" in df.columns:
+    df["code"] = df["code"].astype(str)
+
+if "today" in df.columns:
+    df["today"] = pd.to_datetime(df["today"], format="%Y%m%d").dt.date
 
 # ===============================
-# NaN / inf除去
+# 当日データのみ抽出
+# ===============================
+today_date = datetime.now().date()
+df = df[df["today"] == today_date]
+
+# ===============================
+# NaN / inf 完全除去（超重要）
 # ===============================
 df = df.replace([np.inf, -np.inf], np.nan)
 df = df.astype(object).where(pd.notnull(df), None)
 
 # ===============================
-# records化
+# records化（安全化）
 # ===============================
-records = df.to_dict(orient="records")
+def clean(x):
+    if x is None:
+        return None
+    if isinstance(x, float):
+        if math.isnan(x) or math.isinf(x):
+            return None
+    return x
+
+records = [
+    {k: clean(v) for k, v in row.items()}
+    for row in df.to_dict(orient="records")
+]
 
 # ===============================
-# 最終チェック（デバッグ用）
+# デバッグ（異常値検知）
 # ===============================
 for i, r in enumerate(records):
     for k, v in r.items():
@@ -146,7 +142,7 @@ for i, r in enumerate(records):
             sys.exit(1)
 
 # ===============================
-# Supabase insert
+# Supabase upsert（重複防止、today+rank_no）
 # ===============================
 batch_size = 500
 total_inserted = 0
@@ -154,7 +150,12 @@ total_inserted = 0
 for i in range(0, len(records), batch_size):
     batch = records[i:i+batch_size]
 
-    response = supabase.table("trading_value_ranking").insert(batch).execute()
+    response = (
+        supabase
+        .table("trading_value_ranking")
+        .upsert(batch, on_conflict="today,rank_no")
+        .execute()
+    )
 
     if hasattr(response, "error") and response.error:
         print(f"エラー: {response.error}")
