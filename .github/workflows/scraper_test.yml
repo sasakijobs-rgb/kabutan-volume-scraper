@@ -1,13 +1,13 @@
-name: Kabutan scraper_test
+name: Check Update Test
 
 on:
   workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
-  scrape:
+  check:
     runs-on: ubuntu-latest
 
     steps:
@@ -24,19 +24,6 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
-      - name: Run import to Supabase
-        env:
-          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-          SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
-        run: python import_csv_to_supabase.py
-
-      - name: Commit results
+      - name: Run check_update.py
         run: |
-          git config --global user.name "github-actions[bot]"
-          git config --global user.email "github-actions[bot]@users.noreply.github.com"
-
-          git add output/ || true
-
-          git commit -m "update scraper_test result" || echo "no changes"
-
-          git push
+          python check_update.py
