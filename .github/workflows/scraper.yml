@@ -58,10 +58,10 @@ jobs:
       # =========================
       - name: Check output
         run: |
-          echo "===== output ====="
-          find output -type f -daystart -mtime 0 \
+          echo "===== output (after job start) ====="
+          find output -type f -newer /tmp/job_start_marker \
           -exec ls -lh --time-style="+%Y-%m-%d %H:%M:%S" {} \;
-  
+      
       # =========================
       # commit
       # =========================
