@@ -49,8 +49,9 @@ jobs:
       - name: Check output
         run: |
           echo "===== output ====="
-          ls -R output || true
-
+          find output -type f -daystart -mtime 0 \
+          -exec ls -lh --time-style="+%Y-%m-%d %H:%M:%S" {} \;
+  
       # =========================
       # commit
       # =========================
