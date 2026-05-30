@@ -54,7 +54,7 @@ jobs:
           python scraper.py
 
       # =========================
-      # output確認
+      # output確認(上記のマーカー以降のみ表示)
       # =========================
       - name: Check output
         run: |
