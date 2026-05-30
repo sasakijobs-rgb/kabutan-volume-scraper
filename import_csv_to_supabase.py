@@ -19,7 +19,7 @@ if not SUPABASE_URL or not SUPABASE_KEY:
 supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
 
 # ===============================
-# CSVパス
+# CSVファイル
 # ===============================
 today_str = datetime.now().strftime("%Y%m%d")
 file_path = f"output/trading_value_ranking_{today_str}.csv"
@@ -36,18 +36,21 @@ print(f"読み込むCSV: {file_path}")
 df = pd.read_csv(file_path)
 
 # ===============================
-# 数値クリーニング関数
+# 数値変換関数（完全対応）
 # ===============================
 def to_number(x):
     if x is None:
         return None
+
+    if isinstance(x, float):
+        if math.isnan(x) or math.isinf(x):
+            return None
 
     if isinstance(x, str):
         x = x.replace(",", "").strip()
         x = x.replace("ー倍", "")
         x = x.replace("ー%", "")
         x = x.replace("ー", "")
-
         if x == "":
             return None
 
@@ -57,7 +60,7 @@ def to_number(x):
         return None
 
 # ===============================
-# 数値列変換（重要）
+# 数値列変換
 # ===============================
 numeric_cols = [
     "株価",
@@ -74,7 +77,7 @@ for col in numeric_cols:
         df[col] = df[col].apply(to_number)
 
 # ===============================
-# 型変換（必要なものだけ）
+# 型変換
 # ===============================
 if "順位" in df.columns:
     df["順位"] = pd.to_numeric(df["順位"], errors="coerce").astype("Int64")
@@ -86,15 +89,26 @@ if "コード" in df.columns:
 # NaN / inf 完全除去（超重要）
 # ===============================
 df = df.replace([np.inf, -np.inf], np.nan)
-df = df.where(pd.notnull(df), None)
+df = df.astype(object).where(pd.notnull(df), None)
 
 # ===============================
-# records化
+# records化（安全化）
 # ===============================
-records = df.to_dict(orient="records")
+def clean(x):
+    if x is None:
+        return None
+    if isinstance(x, float):
+        if math.isnan(x) or math.isinf(x):
+            return None
+    return x
+
+records = [
+    {k: clean(v) for k, v in row.items()}
+    for row in df.to_dict(orient="records")
+]
 
 # ===============================
-# デバッグ（異常値検出したい時用）
+# デバッグ（異常値検知）
 # ===============================
 for i, r in enumerate(records):
     for k, v in r.items():
