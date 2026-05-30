@@ -47,3 +47,9 @@ def check_update():
 
     print("\n[RUN] 更新あり")
     return True
+def update_last():
+    today = load_csv(TODAY_FILE)
+
+    if today is not None:
+        save_csv(LAST_FILE, today)
+        print("[INFO] last更新")
