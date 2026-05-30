@@ -4,6 +4,7 @@ import numpy as np
 from datetime import datetime
 from supabase import create_client
 import sys
+import math
 
 # ===============================
 # Supabase設定
@@ -18,7 +19,7 @@ if not SUPABASE_URL or not SUPABASE_KEY:
 supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
 
 # ===============================
-# 当日CSVファイルパス
+# CSVパス
 # ===============================
 today_str = datetime.now().strftime("%Y%m%d")
 file_path = f"output/trading_value_ranking_{today_str}.csv"
@@ -56,15 +57,25 @@ def to_number(x):
         return None
 
 # ===============================
-# 数値列変換（安全化）
+# 数値列変換（重要）
 # ===============================
-numeric_cols = ["株価", "前日差", "騰落率", "売買代金", "PER", "PBR", "配当利回り"]
+numeric_cols = [
+    "株価",
+    "前日差",
+    "騰落率",
+    "売買代金",
+    "PER",
+    "PBR",
+    "配当利回り"
+]
 
 for col in numeric_cols:
     if col in df.columns:
         df[col] = df[col].apply(to_number)
 
-# rank / code系（整数）
+# ===============================
+# 型変換（必要なものだけ）
+# ===============================
 if "順位" in df.columns:
     df["順位"] = pd.to_numeric(df["順位"], errors="coerce").astype("Int64")
 
@@ -72,18 +83,27 @@ if "コード" in df.columns:
     df["コード"] = df["コード"].astype(str)
 
 # ===============================
-# NaN / inf 完全除去（重要）
+# NaN / inf 完全除去（超重要）
 # ===============================
 df = df.replace([np.inf, -np.inf], np.nan)
 df = df.where(pd.notnull(df), None)
 
 # ===============================
-# Supabase用に辞書化
+# records化
 # ===============================
 records = df.to_dict(orient="records")
 
 # ===============================
-# バッチINSERT
+# デバッグ（異常値検出したい時用）
+# ===============================
+for i, r in enumerate(records):
+    for k, v in r.items():
+        if isinstance(v, float) and (math.isnan(v) or math.isinf(v)):
+            print(f"BAD VALUE -> row:{i}, col:{k}, value:{v}")
+            sys.exit(1)
+
+# ===============================
+# Supabase insert
 # ===============================
 batch_size = 500
 total_inserted = 0
