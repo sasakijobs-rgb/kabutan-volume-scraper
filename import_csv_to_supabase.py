@@ -130,15 +130,27 @@ def clean_for_supabase(df):
 # =========================
 # Supabase投入
 # =========================
-def insert_to_supabase(df: pd.DataFrame):
+BATCH_SIZE = 500
+
+def insert_to_supabase(df):
 
     data = df.to_dict(orient="records")
+    total = len(data)
 
-    response = supabase.table(TABLE_NAME).insert(data).execute()
+    print(f"[INFO] 開始: {total}件")
 
-    print("insert件数:", len(data))
-    print("レスポンス:", response)
+    for i in range(0, total, BATCH_SIZE):
 
+        batch = data[i:i+BATCH_SIZE]
+
+        supabase.table(TABLE_NAME).insert(batch).execute()
+
+        print(
+            f"[INFO] "
+            f"{min(i+BATCH_SIZE, total)}/{total} 件完了"
+        )
+
+    print("[INFO] Supabase反映完了")
 
 # =========================
 # main
