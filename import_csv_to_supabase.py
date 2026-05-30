@@ -93,6 +93,19 @@ def preprocess_df(df: pd.DataFrame) -> pd.DataFrame:
     # 日本語 → ローマ字
     df = df.rename(columns=COLUMN_MAP)
 
+    # ---- カンマ除去 ----
+    comma_cols = [
+        "stock_price",
+        "diff_price",
+        "trade_value"
+    ]
+    for col in comma_cols:
+        df[col] = (
+            df[col]
+            .astype(str)
+            .str.replace(",", "", regex=False)
+        )
+
     # 数値系（安全変換）
     df["rank"] = pd.to_numeric(df["rank"], errors="coerce").astype("Int64")
     df["trade_value"] = pd.to_numeric(df["trade_value"], errors="coerce").astype("Int64")
