@@ -3,6 +3,8 @@ from bs4 import BeautifulSoup
 import csv
 import os
 
+print("===== CHECK START =====")
+
 URL = "https://s.kabutan.jp/warnings/trading_value_ranking/?market=all&page=1"
 
 OUTPUT_DIR = "output"
@@ -70,6 +72,9 @@ def fetch_page():
 # 更新チェック本体
 # =========================
 def check_update():
+    # 未更新時のskipフラグをクリアする
+    if os.path.exists("output/skip.flag"):
+        os.remove("output/skip.flag")
 
     print("===== CHECK START =====")
 
