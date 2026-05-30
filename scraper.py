@@ -5,10 +5,10 @@
 # →cleanup.py
 # (ファイルが150個以上は削除)
 # →data2csv.py
+#  →last_data20.csvを更新(data2csvが正常終了時のみ)
 # (株探のモバイル版からデータを取得）
 # →nikkei_data_vi.csvを更新
 # →supabaseへcsvを反映する
-# →last_data20.csvを更新(全てが正常終了時のみ)
 # =========================
 import os
 import subprocess
