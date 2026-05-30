@@ -59,7 +59,7 @@ def main():
 
 
     # STEP 1
-    print("[STEP 1/4] cleanup.py 実行")
+    print("[STEP 1/5] cleanup.py 実行")
 
     if not run_py("cleanup.py"):
         print("[ABORT] cleanup失敗")
@@ -67,20 +67,20 @@ def main():
 
 
     # STEP 2
-    print("[STEP 2/4] data2csv.py 実行")
+    print("[STEP 2/5] data2csv.py 実行")
 
     if not run_py("data2csv.py"):
         print("[ABORT] data2csv失敗")
         return
 
     # STEP 3 →supabaseに全件入れるので不要
-    # print("[STEP 3/4] merge.py 実行")
+    # print("[STEP 3/5] merge.py 実行")
     # if not run_py("merge.py"):
     #     print("[ABORT] merge.py 失敗")
     #     return
 
     # STEP 3
-    print("[STEP 3/4] import_csv_to_supabase.py 実行")
+    print("[STEP 3/5] import_csv_to_supabase.py 実行")
 
     if not run_py("import_csv_to_supabase.py"):
         print("[ABORT] import_csv_to_supabase.py 失敗")
@@ -93,7 +93,7 @@ def main():
 
     # STEP 4
     #（日経Viのデータを更新）
-    print("[STEP 4/4] nikkei_vi_data.py 実行")
+    print("[STEP 4/5] nikkei_vi_data.py 実行")
 
     if not run_py("nikkei_vi_data.py"):
         print("[ABORT] nikkei_vi_data.py 失敗")
@@ -101,7 +101,7 @@ def main():
 
     # STEP 5
     #（supabaseへ当日のcsvを反映する）
-    print("[STEP 1/1] import_csv_to_supabase.py 実行")
+    print("[STEP 5/5] import_csv_to_supabase.py 実行")
     #
     if not run_py("import_csv_to_supabase.py"):
     
