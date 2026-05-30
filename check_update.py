@@ -1,3 +1,5 @@
+from data2csv import fetch_page
+
 def check_update():
 
     print("===== CHECK START =====")
