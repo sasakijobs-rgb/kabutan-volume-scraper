@@ -2,6 +2,7 @@ import requests
 from bs4 import BeautifulSoup
 import csv
 import os
+import time
 
 URL = "https://s.kabutan.jp/warnings/trading_value_ranking/?market=all&page=1"
 
@@ -18,9 +19,14 @@ def save_csv(path, rows):
 
     os.makedirs(OUTPUT_DIR, exist_ok=True)
 
+    print("[DEBUG] save:", os.path.abspath(path))
+
     with open(path, "w", newline="", encoding="utf-8-sig") as f:
         writer = csv.writer(f)
         writer.writerows(rows)
+
+    print("[DEBUG] saved rows:", len(rows))
+    print("[DEBUG] mtime:", time.ctime(os.path.getmtime(path)))
 
 
 # =========================================
@@ -80,7 +86,6 @@ def fetch_page():
 
         parts = text.split()
 
-        # ⚠ 現実的に厳しすぎるので緩めてもOK
         if len(parts) < 10:
             continue
 
@@ -92,31 +97,28 @@ def fetch_page():
 
 
 # =========================================
-# 更新判定（あなた仕様）
+# 更新判定
 # =========================================
 def is_updated():
 
-    # ① 取得
     current = fetch_page()
 
-    # ② ★必ずTODAY保存（成功/失敗問わず記録）
+    # TODAY保存
     save_csv(TODAY_FILE, current)
 
-    # ③ 取得失敗チェック（記録は済んでいる）
     if not current:
         print("[ERROR] データ取得失敗（TODAYは更新済み）")
         return False
 
-    # ④ LAST読み込み
     old = load_csv(LAST_FILE)
 
-    # ⑤ 初回
     if old is None:
         print("[INFO] 初回実行（lastなし）")
         return True
 
-    # ⑥ 比較
     if old == current:
+        print("[DEBUG] old rows:", len(old))
+        print("[DEBUG] current rows:", len(current))
         print("[STOP] 変更なし")
         return False
 
@@ -134,3 +136,23 @@ def update_last():
     if current is not None:
         save_csv(LAST_FILE, current)
         print("[INFO] last_data20.csv更新")
+
+
+# =========================================
+# MAIN
+# =========================================
+if __name__ == "__main__":
+
+    print("===== scraper.py START =====")
+
+    print("cwd =", os.getcwd())
+    print("TODAY =", os.path.abspath(TODAY_FILE))
+    print("LAST  =", os.path.abspath(LAST_FILE))
+
+    if not is_updated():
+        print("[ABORT] scraper.py 終了")
+        exit()
+
+    update_last()
+
+    print("===== scraper.py END =====")
