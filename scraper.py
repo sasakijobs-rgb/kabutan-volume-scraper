@@ -104,10 +104,11 @@ def main():
 
         if not run_py("import_csv_to_supabase.py"):
             print("[WARN] Supabase反映失敗（継続）")
+except Exception as e:
+    print(f"[ERROR] {e}")
 
-    print("\n===== scraper.py END =====\n")
-    print("[DONE] 全処理終了")
+print("\n===== scraper.py END =====\n")
+print("[DONE] 全処理終了")
 
 
-if __name__ == "__main__":
-    main()
+if __name__ == "__main__"    main()
