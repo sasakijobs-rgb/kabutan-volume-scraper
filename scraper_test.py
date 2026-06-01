@@ -9,9 +9,18 @@ from selenium.webdriver.chrome.options import Options
 URL = "https://shikiho.toyokeizai.net/market/N225"
 
 
-def safe_text(driver, css):
+def get(driver, label):
+
     try:
-        return driver.find_element(By.CSS_SELECTOR, css).text.strip()
+        dt_list = driver.find_elements(By.CSS_SELECTOR, "dl dt")
+
+        for dt in dt_list:
+            if dt.text.strip() == label:
+                dd = dt.find_element(By.XPATH, "following-sibling::dd[1]")
+                return dd.text.strip()
+
+        return ""
+
     except:
         return ""
 
@@ -26,58 +35,29 @@ def fetch():
     driver = webdriver.Chrome(options=options)
     driver.get(URL)
 
-    # JS描画待ち（最小安定値）
     driver.implicitly_wait(10)
 
-    # =========================
-    # 基本値
-    # =========================
-    current = safe_text(driver, ".basic-section__price__current")
-    change = safe_text(driver, ".basic-section__price__change")
+    data = {
+        "日付": datetime.now().strftime("%Y/%m/%d 15:30"),
 
-    # =========================
-    # dt/dd構造を辞書化
-    # =========================
-    data_map = {}
+        "始値": get(driver, "始値"),
+        "高値": get(driver, "高値"),
+        "安値": get(driver, "安値"),
 
-    for dt in driver.find_elements(By.CSS_SELECTOR, "dl dt"):
-        try:
-            key = dt.text.strip()
-            value = dt.find_element(By.XPATH, "following-sibling::dd[1]").text.strip()
-            data_map[key] = value
-        except:
-            continue
+        "年初来高値": get(driver, "年初来高値"),
+        "年初来安値": get(driver, "年初来安値"),
+
+        "出来高": get(driver, "出来高"),
+        "売買代金": get(driver, "売買代金"),
+
+        "22日平均": get(driver, "└ 22日平均"),
+        "年初来上昇率": get(driver, "年初来株価上昇率"),
+        "200日乖離率": get(driver, "200日移動平均乖離率"),
+    }
 
     driver.quit()
 
-    # =========================
-    # 日付・時間は固定（重要）
-    # =========================
-    now = datetime.now()
-    date_str = now.strftime("%Y/%m/%d")
-    time_str = "15:30"
-
-    # =========================
-    # 安全getter（型ズレ防止）
-    # =========================
-    def g(k):
-        return data_map.get(k, "").replace("\n", " ").strip()
-
-    row = {
-        "日付": f"{date_str} {time_str}",
-        "現在値": current,
-        "前日比": change,
-        "始値": g("始値"),
-        "前日終値": g("前日終値"),
-        "高値": g("高値"),
-        "安値": g("安値"),
-        "年初来高値": g("年初来高値"),
-        "年初来安値": g("年初来安値"),
-        "出来高": g("出来高"),
-        "売買代金": g("売買代金"),
-    }
-
-    return row
+    return data
 
 
 def save(data):
@@ -87,16 +67,14 @@ def save(data):
     path = "output/nikkei_avg_data.csv"
     exists = os.path.isfile(path)
 
-    cols = list(data.keys())
-
     with open(path, "a", newline="", encoding="utf-8-sig") as f:
+
         w = csv.writer(f)
 
         if not exists:
-            w.writerow(cols)
+            w.writerow(data.keys())
 
-        # ★None対策（絶対に落ちない）
-        w.writerow([data.get(c, "") for c in cols])
+        w.writerow([data[k] for k in data.keys()])
 
 
 def main():
@@ -107,7 +85,6 @@ def main():
         print("saved")
 
     except Exception as e:
-        # ★ここで止めない（GitHub Actions安定化）
         print("error:", e)
 
 
