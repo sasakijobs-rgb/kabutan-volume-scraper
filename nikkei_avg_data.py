@@ -46,7 +46,7 @@ def fetch():
 
     data = {
         "日付": now.strftime("%Y/%m/%d"),
-        "時間": now.strftime("15:30"),
+        "時間": "15:30",
 
         "現在値": driver.find_element(By.CSS_SELECTOR, ".basic-section__price__current").text.strip(),
         "前日比": driver.find_element(By.CSS_SELECTOR, ".basic-section__price__change").text.strip(),
