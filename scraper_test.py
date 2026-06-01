@@ -1,123 +1,90 @@
+import os
+import csv
 import requests
 from bs4 import BeautifulSoup
-import csv
-import os
-
-URL = "https://s.kabutan.jp/warnings/trading_value_ranking/?market=all&page=1"
-
-OUTPUT_DIR = "output"
-TODAY_FILE = os.path.join(OUTPUT_DIR, "today_data20.csv")
-LAST_FILE = os.path.join(OUTPUT_DIR, "last_data20.csv")
+import re
+from datetime import datetime
 
 
-# =========================
-# CSV保存
-# =========================
-def save_csv(path, rows):
-    os.makedirs(OUTPUT_DIR, exist_ok=True)
-
-    with open(path, "w", newline="", encoding="utf-8-sig") as f:
-        writer = csv.writer(f)
-        writer.writerows(rows)
+URL = "https://www.sbisec.co.jp/ETGate/?_ControlID=WPLETmgR001Control&_PageID=WPLETmgR001Mdtl20&_DataStoreID=DSWPLETmgR001Control&_ActionID=DefaultAID&burl=iris_indexDetail&cat1=market&cat2=index&dir=tl1-idxdtl%7Ctl2-.N225%7Ctl5-jpn&file=index.html&getFlg=on"
 
 
-# =========================
-# CSV読み込み
-# =========================
-def load_csv(path):
-    if not os.path.exists(path):
-        return None
+def fetch():
 
-    with open(path, "r", encoding="utf-8-sig") as f:
-        return list(csv.reader(f))
-
-
-# =========================
-# 1ページ目取得
-# =========================
-def fetch_page():
-
-    headers = {
+    session = requests.Session()
+    session.headers.update({
         "User-Agent": "Mozilla/5.0",
         "Accept-Language": "ja,en-US;q=0.9"
-    }
+    })
 
-    r = requests.get(URL, headers=headers, timeout=30)
+    res = session.get(URL, timeout=30)
+    res.raise_for_status()
 
-    if r.status_code != 200:
-        print("[ERROR] status:", r.status_code)
-        return []
+    soup = BeautifulSoup(res.text, "html.parser")
 
-    soup = BeautifulSoup(r.text, "html.parser")
-    rows = soup.select("table tbody tr")
+    price_tag = soup.select_one("#idxdtlPrice em")
+    net_change_tag = soup.select_one("#idxdtlNetChange")
+    open_tag = soup.select_one("#idxdtlOpen b")
+    close_tag = soup.select_one("#idxdtlClose b")
+    high_tag = soup.select_one("#idxdtlHigh b")
+    low_tag = soup.select_one("#idxdtlLow b")
 
-    data = []
+    raw = price_tag.get_text(" ", strip=True) if price_tag else ""
 
-    for row in rows:
-        text = row.get_text(" ", strip=True)
-        text = text.replace("かぶたん プレミアム", "")
-        parts = text.split()
+    m = re.search(r"\((\d{2}/\d{2}/\d{2})\s+(\d{2}:\d{2})\)", raw)
 
-        if len(parts) < 10:
-            continue
+    date, time = ("", "")
+    if m:
+        date, time = m.group(1), m.group(2)
 
-        data.append(parts[:10])
+    def clean(x):
+        return x.get_text(strip=True).replace(",", "") if x else ""
 
-    return data
-
-
-# =========================
-# 更新チェック
-# =========================
-def check_update():
-
-    print("===== CHECK START =====")
-
-    today = fetch_page()
-
-    save_csv(TODAY_FILE, today)
-    print(f"[INFO] today saved: {len(today)} rows")
-
-    last = load_csv(LAST_FILE)
-
-    if last is None:
-        print("[INFO] 初回実行（lastなし）")
-        return True
-
-    if last == today:
-        print("[STOP] 変更なし（完全一致）")
-        return False
-
-    print("[RUN] 更新あり")
-    return True
+    return [
+        date,
+        time,
+        clean(price_tag).split(" ")[0] if price_tag else "",
+        net_change_tag.get_text(" ", strip=True) if net_change_tag else "",
+        clean(open_tag),
+        clean(close_tag),
+        clean(high_tag),
+        clean(low_tag),
+    ]
 
 
-# =========================
-# last更新
-# =========================
-def update_last():
+def save(row):
 
-    today = load_csv(TODAY_FILE)
+    os.makedirs("output", exist_ok=True)
 
-    if today is not None:
-        save_csv(LAST_FILE, today)
-        print("[INFO] last更新")
+    file_path = "output/nikkei_avg_data.csv"
+
+    file_exists = os.path.isfile(file_path)
+
+    with open(file_path, "a", newline="", encoding="utf-8-sig") as f:
+        writer = csv.writer(f)
+
+        if not file_exists:
+            writer.writerow([
+                "日付",
+                "時間",
+                "現在値",
+                "前日比",
+                "始値",
+                "前日終値",
+                "高値",
+                "安値"
+            ])
+
+        writer.writerow(row)
 
 
-# =========================
-# main
-# =========================
+def main():
+
+    row = fetch()
+    save(row)
+
+    print("saved:", datetime.now())
+
+
 if __name__ == "__main__":
-
-    # ① 更新チェック
-    if not check_update():
-        print("[EXIT] 変更なし → 処理終了")
-        exit(1)
-
-    # ② ここに本処理を追加する想定
-    print("[RUN] 本処理実行（ここにscraperやSupabase処理）")
-
-    # ③ 成功時のみlast更新
-    update_last()
-
-    print("[DONE] 完了")
+    main()
