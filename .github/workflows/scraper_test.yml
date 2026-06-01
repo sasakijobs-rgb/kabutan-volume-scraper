@@ -2,7 +2,6 @@ name: nikkei scraper stable
 
 on:
   workflow_dispatch:
-  push:
 
 permissions:
   contents: write
@@ -12,18 +11,24 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      # =========================
+      # 1. リポジトリ取得（完全履歴）
+      # =========================
       - name: Checkout
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
+      # =========================
+      # 2. Pythonセットアップ
+      # =========================
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: "3.11"
 
       # =========================
-      # 依存関係
+      # 3. 依存関係インストール
       # =========================
       - name: Install dependencies
         run: |
@@ -31,7 +36,7 @@ jobs:
           pip install selenium
 
       # =========================
-      # Chromeインストール
+      # 4. Chromeインストール
       # =========================
       - name: Install Google Chrome
         run: |
@@ -39,30 +44,37 @@ jobs:
           sudo apt-get install -y google-chrome-stable
 
       # =========================
-      # スクレイピング実行
+      # 5. リポジトリ状態を完全同期
+      # （ここが重要：前回データ問題の原因潰し）
       # =========================
-      - name: Run scraper
-        run: python scraper_test.py
-
-      # =========================
-      # Git同期（競合回避）
-      # ★ここが重要
-      # =========================
-      - name: Sync with remote (avoid conflict)
+      - name: Sync repository state
         run: |
           git config user.name github-actions
           git config user.email github-actions@github.com
 
           git fetch origin main
           git reset --hard origin/main
+          git clean -fd
 
       # =========================
-      # CSVコミット
+      # 6. スクレイピング実行
       # =========================
-      - name: Commit CSV
+      - name: Run scraper
+        run: python scraper_test.py
+
+      # =========================
+      # 7. commit & push（競合対策込み）
+      # =========================
+      - name: Commit and Push
         run: |
+          git config user.name github-actions
+          git config user.email github-actions@github.com
+
           git add output/nikkei_avg_data.csv
 
           git commit -m "update nikkei data" || echo "no changes"
+
+          # push失敗時に最新を取り直して再push
+          git pull --rebase origin main || true
 
           git push origin main
