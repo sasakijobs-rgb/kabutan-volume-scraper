@@ -7,7 +7,8 @@
 # →data2csv.py
 # (株探のモバイル版からデータを取得）
 #  →last_data20.csvを更新(data2csvが正常終了時のみ)
-# →nikkei_data_vi.csvを更新
+# →nikkei_vi_data.csvを更新
+# →nikkei_avg_data.csvを更新
 # →supabaseへcsvを反映する
 # =========================
 import os
@@ -88,6 +89,13 @@ def main():
         if not run_py("nikkei_vi_data.py"):
             print("[WARN] nikkei_vi_data.py失敗（継続）")
 
+        # =========================
+        # STEP 3.5
+        # =========================
+        print("[STEP 3.5/5] nikkei_avg_data.py 実行")
+
+        if not run_py("nekkei_avg_data.py"):
+            print("[WARN] nekkei_avg_data.py失敗（継続）")
 
         # =========================
         # STEP 4
