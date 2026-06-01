@@ -112,4 +112,7 @@ def main():
         print("\n===== scraper.py END =====\n")
         print("[DONE] 全処理終了")
 
-if __name__ == "__main__"    main()
+if __name__ == "__main__":
+    main()
+
+
