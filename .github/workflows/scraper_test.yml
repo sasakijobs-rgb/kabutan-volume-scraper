@@ -20,9 +20,16 @@ jobs:
         with:
           python-version: "3.11"
 
+      # ★ここが重要（必須）
       - name: Install dependencies
         run: |
-          pip install requests beautifulsoup4
+          python -m pip install --upgrade pip
+          pip install playwright
+
+      # ★ブラウザ本体インストール
+      - name: Install Playwright browsers
+        run: |
+          python -m playwright install chromium
 
       - name: Run scraper
         run: python scraper_test.py
@@ -34,8 +41,3 @@ jobs:
           git add output/nikkei_avg_data.csv
           git commit -m "update nikkei data" || echo "no changes"
           git push
-      - name: Install Playwright
-        run: |
-          pip install playwright
-          playwright install chromium
-    
