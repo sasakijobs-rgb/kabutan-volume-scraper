@@ -2,6 +2,7 @@ import csv
 import os
 import time
 from datetime import datetime
+from re
 
 from selenium import webdriver
 from selenium.webdriver.common.by import By
@@ -12,7 +13,20 @@ from selenium.webdriver.support import expected_conditions as EC
 
 URL = "https://shikiho.toyokeizai.net/market/N225"
 
+def clean_value(v):
+    if v is None:
+        return ""
 
+    v = str(v)
+
+    # 数値のカンマ削除（1,234 → 1234）
+    v = v.replace(",", "")
+
+    # 全角スペース・余計な空白整理
+    v = v.replace("\n", "").replace("\t", "").strip()
+
+    return v
+    
 def get_text(driver, label):
     try:
         dts = driver.find_elements(By.CSS_SELECTOR, "dl dt")
@@ -88,9 +102,8 @@ def save_merged(data):
         if not exists:
             w.writerow(cols)
 
-        w.writerow([data.get(c, "") for c in cols])
-
-
+        w.writerow([clean_value(data.get(c, "")) for c in cols])
+        
 # =========================
 # 今日だけ（上書き）
 # =========================
@@ -104,8 +117,7 @@ def save_today(data):
         w = csv.writer(f)
 
         w.writerow(cols)
-        w.writerow([data.get(c, "") for c in cols])
-
+        w.writerow([clean_value(data.get(c, "")) for c in cols])
 
 def main():
     try:
