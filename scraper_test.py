@@ -1,9 +1,7 @@
-import os
 import csv
-import requests
-from bs4 import BeautifulSoup
+import os
 import re
-from datetime import datetime
+from playwright.sync_api import sync_playwright
 
 
 URL = "https://www.sbisec.co.jp/ETGate/?_ControlID=WPLETmgR001Control&_PageID=WPLETmgR001Mdtl20&_DataStoreID=DSWPLETmgR001Control&_ActionID=DefaultAID&burl=iris_indexDetail&cat1=market&cat2=index&dir=tl1-idxdtl%7Ctl2-.N225%7Ctl5-jpn&file=index.html&getFlg=on"
@@ -11,44 +9,44 @@ URL = "https://www.sbisec.co.jp/ETGate/?_ControlID=WPLETmgR001Control&_PageID=WP
 
 def fetch():
 
-    session = requests.Session()
-    session.headers.update({
-        "User-Agent": "Mozilla/5.0",
-        "Accept-Language": "ja,en-US;q=0.9"
-    })
+    with sync_playwright() as p:
 
-    res = session.get(URL, timeout=30)
-    res.raise_for_status()
+        browser = p.chromium.launch(headless=True)
+        page = browser.new_page()
 
-    soup = BeautifulSoup(res.text, "html.parser")
+        page.goto(URL, wait_until="networkidle")
 
-    price_tag = soup.select_one("#idxdtlPrice em")
-    net_change_tag = soup.select_one("#idxdtlNetChange")
-    open_tag = soup.select_one("#idxdtlOpen b")
-    close_tag = soup.select_one("#idxdtlClose b")
-    high_tag = soup.select_one("#idxdtlHigh b")
-    low_tag = soup.select_one("#idxdtlLow b")
+        # 明示的に要素待ち（JS描画対策）
+        page.wait_for_selector("#idxdtlPrice em")
 
-    raw = price_tag.get_text(" ", strip=True) if price_tag else ""
+        raw_price = page.locator("#idxdtlPrice em").inner_text()
+        net_change = page.locator("#idxdtlNetChange").inner_text()
 
-    m = re.search(r"\((\d{2}/\d{2}/\d{2})\s+(\d{2}:\d{2})\)", raw)
+        open_ = page.locator("#idxdtlOpen b").inner_text()
+        close = page.locator("#idxdtlClose b").inner_text()
+        high = page.locator("#idxdtlHigh b").inner_text()
+        low = page.locator("#idxdtlLow b").inner_text()
+
+        browser.close()
+
+    # 日付・時間抽出
+    m = re.search(r"\((\d{2}/\d{2}/\d{2})\s+(\d{2}:\d{2})\)", raw_price)
 
     date, time = ("", "")
     if m:
         date, time = m.group(1), m.group(2)
 
-    def clean(x):
-        return x.get_text(strip=True).replace(",", "") if x else ""
+    price = raw_price.split(" ")[0] if raw_price else ""
 
     return [
         date,
         time,
-        clean(price_tag).split(" ")[0] if price_tag else "",
-        net_change_tag.get_text(" ", strip=True) if net_change_tag else "",
-        clean(open_tag),
-        clean(close_tag),
-        clean(high_tag),
-        clean(low_tag),
+        price,
+        net_change,
+        open_,
+        close,
+        high,
+        low
     ]
 
 
@@ -56,15 +54,14 @@ def save(row):
 
     os.makedirs("output", exist_ok=True)
 
-    file_path = "output/nikkei_avg_data.csv"
+    path = "output/nikkei_avg_data.csv"
+    exists = os.path.isfile(path)
 
-    file_exists = os.path.isfile(file_path)
+    with open(path, "a", newline="", encoding="utf-8-sig") as f:
+        w = csv.writer(f)
 
-    with open(file_path, "a", newline="", encoding="utf-8-sig") as f:
-        writer = csv.writer(f)
-
-        if not file_exists:
-            writer.writerow([
+        if not exists:
+            w.writerow([
                 "日付",
                 "時間",
                 "現在値",
@@ -75,7 +72,7 @@ def save(row):
                 "安値"
             ])
 
-        writer.writerow(row)
+        w.writerow(row)
 
 
 def main():
@@ -83,7 +80,7 @@ def main():
     row = fetch()
     save(row)
 
-    print("saved:", datetime.now())
+    print("saved")
 
 
 if __name__ == "__main__":
