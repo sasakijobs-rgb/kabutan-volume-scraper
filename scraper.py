@@ -94,8 +94,8 @@ def main():
         # =========================
         print("[STEP 3.5/5] nikkei_avg_data.py 実行")
 
-        if not run_py("nekkei_avg_data.py"):
-            print("[WARN] nekkei_avg_data.py失敗（継続）")
+        if not run_py("nikkei_avg_data.py"):
+            print("[WARN] nikkei_avg_data.py失敗（継続）")
 
         # =========================
         # STEP 4
