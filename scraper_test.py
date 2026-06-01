@@ -1,17 +1,22 @@
 import csv
 import os
+import time
 from datetime import datetime
+
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.chrome.options import Options
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
 
 
 URL = "https://shikiho.toyokeizai.net/market/N225"
 
 
-def get(driver, label):
+def get_text(driver, label):
     try:
-        for dt in driver.find_elements(By.CSS_SELECTOR, "dl dt"):
+        dts = driver.find_elements(By.CSS_SELECTOR, "dl dt")
+        for dt in dts:
             if dt.text.strip() == label:
                 dd = dt.find_element(By.XPATH, "following-sibling::dd[1]")
                 return dd.text.strip()
@@ -26,35 +31,40 @@ def fetch():
     options.add_argument("--headless=new")
     options.add_argument("--no-sandbox")
     options.add_argument("--disable-dev-shm-usage")
+    options.add_argument("--disable-gpu")
 
     driver = webdriver.Chrome(options=options)
     driver.get(URL)
 
-    driver.implicitly_wait(10)
+    # ★重要：JSレンダリング待ち
+    WebDriverWait(driver, 20).until(
+        EC.presence_of_element_located((By.CSS_SELECTOR, ".basic-section"))
+    )
+
+    time.sleep(3)  # 追加安定化
 
     data = {
-        "日付": datetime.now().strftime("%Y/%m/%d 15:30"),
+        "日付": datetime.now().strftime("%Y/%m/%d %H:%M:%S"),
 
         "現在値": driver.find_element(By.CSS_SELECTOR, ".basic-section__price__current").text.strip(),
         "前日比": driver.find_element(By.CSS_SELECTOR, ".basic-section__price__change").text.strip(),
 
-        "始値": get(driver, "始値"),
-        "高値": get(driver, "高値"),
-        "安値": get(driver, "安値"),
+        "始値": get_text(driver, "始値"),
+        "高値": get_text(driver, "高値"),
+        "安値": get_text(driver, "安値"),
 
-        "年初来高値": get(driver, "年初来高値"),
-        "年初来安値": get(driver, "年初来安値"),
+        "年初来高値": get_text(driver, "年初来高値"),
+        "年初来安値": get_text(driver, "年初来安値"),
 
-        "出来高": get(driver, "出来高"),
-        "売買代金": get(driver, "売買代金"),
+        "出来高": get_text(driver, "出来高"),
+        "売買代金": get_text(driver, "売買代金"),
+        "22日平均": get_text(driver, "└ 22日平均"),
 
-        "22日平均": get(driver, "└ 22日平均"),
-        "年初来株価上昇率": get(driver, "年初来株価上昇率"),
-        "200日移動平均乖離率": get(driver, "200日移動平均乖離率"),
+        "年初来株価上昇率": get_text(driver, "年初来株価上昇率"),
+        "200日移動平均乖離率": get_text(driver, "200日移動平均乖離率"),
     }
 
     driver.quit()
-
     return data
 
 
@@ -77,7 +87,6 @@ def save(data):
 
 
 def main():
-
     try:
         data = fetch()
         save(data)
