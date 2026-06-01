@@ -36,15 +36,17 @@ def fetch():
     driver = webdriver.Chrome(options=options)
     driver.get(URL)
 
-    # JSレンダリング待ち
     WebDriverWait(driver, 20).until(
         EC.presence_of_element_located((By.CSS_SELECTOR, ".basic-section"))
     )
 
-    time.sleep(3)
+    time.sleep(2)
+
+    now = datetime.now()
 
     data = {
-        "日付": datetime.now().strftime("%Y/%m/%d %H:%M:%S"),
+        "日付": now.strftime("%Y/%m/%d %H:%M:%S"),
+        "日付キー": now.strftime("%Y/%m/%d"),
 
         "現在値": driver.find_element(By.CSS_SELECTOR, ".basic-section__price__current").text.strip(),
         "前日比": driver.find_element(By.CSS_SELECTOR, ".basic-section__price__change").text.strip(),
@@ -68,11 +70,14 @@ def fetch():
     return data
 
 
-def save(data):
+# =========================
+# 全履歴（追記）
+# =========================
+def save_merged(data):
 
     os.makedirs("output", exist_ok=True)
 
-    path = "output/nikkei_avg_data.csv"
+    path = "output/nikkei_avg_data_merged.csv"
     exists = os.path.isfile(path)
 
     cols = list(data.keys())
@@ -86,10 +91,29 @@ def save(data):
         w.writerow([data.get(c, "") for c in cols])
 
 
+# =========================
+# 今日だけ（上書き）
+# =========================
+def save_today(data):
+
+    path = "output/nikkei_avg_data.csv"
+
+    cols = list(data.keys())
+
+    with open(path, "w", newline="", encoding="utf-8-sig") as f:
+        w = csv.writer(f)
+
+        w.writerow(cols)
+        w.writerow([data.get(c, "") for c in cols])
+
+
 def main():
     try:
         data = fetch()
-        save(data)
+
+        save_merged(data)
+        save_today(data)
+
         print("saved")
 
     except Exception as e:
