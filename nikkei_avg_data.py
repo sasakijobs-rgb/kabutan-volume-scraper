@@ -45,8 +45,8 @@ def fetch():
     now = datetime.now()
 
     data = {
-        "日付": now.strftime("%Y/%m/%d %H:%M:%S"),
-        "日付キー": now.strftime("%Y/%m/%d"),
+        "日付": now.strftime("%Y/%m/%d"),
+        "日付": now.strftime("15:30"),
 
         "現在値": driver.find_element(By.CSS_SELECTOR, ".basic-section__price__current").text.strip(),
         "前日比": driver.find_element(By.CSS_SELECTOR, ".basic-section__price__change").text.strip(),
@@ -114,7 +114,7 @@ def main():
         save_merged(data)
         save_today(data)
 
-        print("saved")
+        print("nikkei_abg_data_saved")
 
     except Exception as e:
         print("error:", e)
