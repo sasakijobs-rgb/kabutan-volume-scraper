@@ -10,17 +10,12 @@ URL = "https://shikiho.toyokeizai.net/market/N225"
 
 
 def get(driver, label):
-
     try:
-        dt_list = driver.find_elements(By.CSS_SELECTOR, "dl dt")
-
-        for dt in dt_list:
+        for dt in driver.find_elements(By.CSS_SELECTOR, "dl dt"):
             if dt.text.strip() == label:
                 dd = dt.find_element(By.XPATH, "following-sibling::dd[1]")
                 return dd.text.strip()
-
         return ""
-
     except:
         return ""
 
@@ -40,6 +35,9 @@ def fetch():
     data = {
         "日付": datetime.now().strftime("%Y/%m/%d 15:30"),
 
+        "現在値": driver.find_element(By.CSS_SELECTOR, ".basic-section__price__current").text.strip(),
+        "前日比": driver.find_element(By.CSS_SELECTOR, ".basic-section__price__change").text.strip(),
+
         "始値": get(driver, "始値"),
         "高値": get(driver, "高値"),
         "安値": get(driver, "安値"),
@@ -51,8 +49,8 @@ def fetch():
         "売買代金": get(driver, "売買代金"),
 
         "22日平均": get(driver, "└ 22日平均"),
-        "年初来上昇率": get(driver, "年初来株価上昇率"),
-        "200日乖離率": get(driver, "200日移動平均乖離率"),
+        "年初来株価上昇率": get(driver, "年初来株価上昇率"),
+        "200日移動平均乖離率": get(driver, "200日移動平均乖離率"),
     }
 
     driver.quit()
@@ -67,14 +65,15 @@ def save(data):
     path = "output/nikkei_avg_data.csv"
     exists = os.path.isfile(path)
 
-    with open(path, "a", newline="", encoding="utf-8-sig") as f:
+    cols = list(data.keys())
 
+    with open(path, "a", newline="", encoding="utf-8-sig") as f:
         w = csv.writer(f)
 
         if not exists:
-            w.writerow(data.keys())
+            w.writerow(cols)
 
-        w.writerow([data[k] for k in data.keys()])
+        w.writerow([data.get(c, "") for c in cols])
 
 
 def main():
