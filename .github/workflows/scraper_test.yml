@@ -34,3 +34,8 @@ jobs:
           git add output/nikkei_avg_data.csv
           git commit -m "update nikkei data" || echo "no changes"
           git push
+      - name: Install Playwright
+        run: |
+          pip install playwright
+          playwright install chromium
+    
