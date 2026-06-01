@@ -1,84 +1,174 @@
+import requests
+from bs4 import BeautifulSoup
 import csv
 import os
 import re
-from playwright.sync_api import sync_playwright
+from datetime import datetime, timezone, timedelta
 
 
-URL = "https://www.sbisec.co.jp/ETGate/?_ControlID=WPLETmgR001Control&_PageID=WPLETmgR001Mdtl20&_DataStoreID=DSWPLETmgR001Control&_ActionID=DefaultAID&burl=iris_indexDetail&cat1=market&cat2=index&dir=tl1-idxdtl%7Ctl2-.N225%7Ctl5-jpn&file=index.html&getFlg=on"
+URL = "https://shikiho.toyokeizai.net/market/N225"
 
 
-def fetch():
+def fetch_nikkei(session):
 
-    with sync_playwright() as p:
+    try:
+        res = session.get(URL, timeout=30)
+        if res.status_code != 200:
+            return None
 
-        browser = p.chromium.launch(headless=True)
-        page = browser.new_page()
+    except Exception:
+        return None
 
-        page.goto(URL, wait_until="networkidle")
+    soup = BeautifulSoup(res.text, "html.parser")
 
-        # 明示的に要素待ち（JS描画対策）
-        page.wait_for_selector("#idxdtlPrice em")
+    # =========================
+    # メインブロック
+    # =========================
+    block = soup.select_one("div.basic-section")
 
-        raw_price = page.locator("#idxdtlPrice em").inner_text()
-        net_change = page.locator("#idxdtlNetChange").inner_text()
+    if not block:
+        return None
 
-        open_ = page.locator("#idxdtlOpen b").inner_text()
-        close = page.locator("#idxdtlClose b").inner_text()
-        high = page.locator("#idxdtlHigh b").inner_text()
-        low = page.locator("#idxdtlLow b").inner_text()
+    def get_text(selector):
+        tag = block.select_one(selector)
+        return tag.get_text(strip=True) if tag else ""
 
-        browser.close()
+    # =========================
+    # 現在値
+    # =========================
+    current = block.select_one(".basic-section__price__current")
+    current_value = current.get_text(strip=True) if current else ""
 
-    # 日付・時間抽出
-    m = re.search(r"\((\d{2}/\d{2}/\d{2})\s+(\d{2}:\d{2})\)", raw_price)
+    change = block.select_one(".basic-section__price__change")
+    change_value = change.get_text(" ", strip=True) if change else ""
 
-    date, time = ("", "")
-    if m:
-        date, time = m.group(1), m.group(2)
+    # =========================
+    # dt/dd構造（重要）
+    # =========================
+    items = block.select("dl dt")
 
-    price = raw_price.split(" ")[0] if raw_price else ""
+    data_map = {}
+
+    for dt in items:
+        key = dt.get_text(strip=True)
+        dd = dt.find_next_sibling("dd")
+        value = dd.get_text(" ", strip=True) if dd else ""
+        data_map[key] = value
+
+    # =========================
+    # 日付・時間（更新日時）
+    # =========================
+    update_time = ""
+    update_tag = block.select_one(".basic-section__top__update__time")
+    if update_tag:
+        update_time = update_tag.get_text(" ", strip=True)
+
+    # =========================
+    # 高値/安値の時間抽出
+    # =========================
+    def split_price_time(text):
+        m = re.search(r"([\d,\.]+)\s*\((\d{2}:\d{2})\)", text)
+        if m:
+            return m.group(1), m.group(2)
+        return text, ""
+
+    high_price, high_time = split_price_time(data_map.get("高値", ""))
+    low_price, low_time = split_price_time(data_map.get("安値", ""))
+
+    open_price, open_time = split_price_time(data_map.get("始値", ""))
+
+    data = {
+        "更新日時": update_time,
+        "現在値": current_value,
+        "前日比": change_value,
+        "始値": open_price,
+        "始値(時)": open_time,
+        "高値": high_price,
+        "高値(時)": high_time,
+        "安値": low_price,
+        "安値(時)": low_time,
+        "年初来高値": data_map.get("年初来高値", ""),
+        "年初来安値": data_map.get("年初来安値", ""),
+        "出来高": data_map.get("出来高", ""),
+        "売買代金": data_map.get("売買代金", ""),
+        "年初来上昇率": data_map.get("年初来株価上昇率", ""),
+        "乖離率": data_map.get("200日移動平均乖離率", ""),
+    }
+
+    return data
+
+
+def write_header(w):
+
+    w.writerow([
+        "更新日時",
+        "現在値",
+        "前日比",
+        "始値",
+        "始値(時)",
+        "高値",
+        "高値(時)",
+        "安値",
+        "安値(時)",
+        "年初来高値",
+        "年初来安値",
+        "出来高",
+        "売買代金",
+        "年初来上昇率",
+        "乖離率"
+    ])
+
+
+def data_to_row(d):
 
     return [
-        date,
-        time,
-        price,
-        net_change,
-        open_,
-        close,
-        high,
-        low
+        d["更新日時"],
+        d["現在値"],
+        d["前日比"],
+        d["始値"],
+        d["始値(時)"],
+        d["高値"],
+        d["高値(時)"],
+        d["安値"],
+        d["安値(時)"],
+        d["年初来高値"],
+        d["年初来安値"],
+        d["出来高"],
+        d["売買代金"],
+        d["年初来上昇率"],
+        d["乖離率"],
     ]
-
-
-def save(row):
-
-    os.makedirs("output", exist_ok=True)
-
-    path = "output/nikkei_avg_data.csv"
-    exists = os.path.isfile(path)
-
-    with open(path, "a", newline="", encoding="utf-8-sig") as f:
-        w = csv.writer(f)
-
-        if not exists:
-            w.writerow([
-                "日付",
-                "時間",
-                "現在値",
-                "前日比",
-                "始値",
-                "前日終値",
-                "高値",
-                "安値"
-            ])
-
-        w.writerow(row)
 
 
 def main():
 
-    row = fetch()
-    save(row)
+    os.makedirs("output", exist_ok=True)
+
+    session = requests.Session()
+    session.headers.update({
+        "User-Agent": "Mozilla/5.0",
+        "Accept-Language": "ja,en-US;q=0.9",
+        "Referer": "https://shikiho.toyokeizai.net/"
+    })
+
+    data = fetch_nikkei(session)
+
+    if not data:
+        print("no data")
+        return
+
+    row = data_to_row(data)
+
+    file_path = "output/nikkei_avg_data.csv"
+    file_exists = os.path.isfile(file_path)
+
+    with open(file_path, "a", newline="", encoding="utf-8-sig") as f:
+        w = csv.writer(f)
+
+        if not file_exists:
+            write_header(w)
+
+        w.writerow(row)
 
     print("saved")
 
