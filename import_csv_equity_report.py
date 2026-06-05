@@ -73,10 +73,12 @@ def preprocess(df: pd.DataFrame) -> pd.DataFrame:
             )
             df[col] = pd.to_numeric(df[col], errors="coerce")
 
+
     # -------------------------
-    # 日付変換
+    # 日付変換（修正版）
     # -------------------------
     if "report_date" in df.columns:
+
         df["report_date"] = (
             df["report_date"]
             .astype(str)
@@ -86,7 +88,7 @@ def preprocess(df: pd.DataFrame) -> pd.DataFrame:
         df["report_date"] = pd.to_datetime(
             df["report_date"],
             errors="coerce"
-        ).dt.date
+        ).dt.strftime("%Y-%m-%d")    
 
     # -------------------------
     # 取得ページ削除
