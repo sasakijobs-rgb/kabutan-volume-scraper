@@ -1,19 +1,30 @@
-mode: one
+name: stock_reports_daily_run
 
-scraper:
-  base_url: "https://anarepo.kabucluster.com/?page={page}"
-  sleep_range: [0.5, 1.2]
+on:
+  schedule:
+    - cron: "50 6 * * *"  # JST 15:50
+  workflow_dispatch:
 
-pages:
-  start: 501
-  end: 600
+jobs:
+  run:
+    runs-on: ubuntu-latest
 
-supabase:
-  table: stock_reports
-  batch_size: 500
-  unique_keys:
-    - code
-    - report_date
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
-output:
-  save_csv: false
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          pip install -r requirements.txt
+
+      - name: Run stock reports scraper
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
+        run: |
+          python stock_reports.py
