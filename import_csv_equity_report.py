@@ -1,8 +1,6 @@
 import pandas as pd
 import numpy as np
-import re
 import os
-from datetime import datetime
 from supabase import create_client
 
 # =========================
@@ -34,14 +32,81 @@ def resolve_file():
 
 
 # =========================
-# クレンジング
+# 前処理（完全版）
 # =========================
 def preprocess(df: pd.DataFrame) -> pd.DataFrame:
+
+    # -------------------------
+    # - をNULL化
+    # -------------------------
+    df = df.replace(["-", "―", "−", "ー", ""], None)
+
+    # -------------------------
+    # カラム名変換
+    # -------------------------
+    df = df.rename(columns={
+        "銘柄コード": "code",
+        "銘柄名": "name",
+        "現在株価": "stock_price",
+        "レポート公開日": "report_date",
+        "発表機関": "broker",
+        "レポートタイトル": "title",
+        "レーティング": "rating",
+        "目標株価": "target_price",
+        "目標株価乖離率": "target_gap",
+        "取得ページ": "source_page",
+    })
+
+    # -------------------------
+    # 数値変換
+    # -------------------------
+    num_cols = ["stock_price", "target_price", "target_gap"]
+
+    for col in num_cols:
+        if col in df.columns:
+            df[col] = (
+                df[col]
+                .astype(str)
+                .str.replace(",", "", regex=False)
+                .str.replace("%", "", regex=False)
+                .str.replace("円", "", regex=False)
+            )
+            df[col] = pd.to_numeric(df[col], errors="coerce")
+
+    # -------------------------
+    # 日付変換
+    # -------------------------
+    if "report_date" in df.columns:
+        df["report_date"] = (
+            df["report_date"]
+            .astype(str)
+            .str.extract(r"(\d{4}/\d{2}/\d{2})")[0]
+        )
+
+        df["report_date"] = pd.to_datetime(
+            df["report_date"],
+            errors="coerce"
+        ).dt.date
+
+    # -------------------------
+    # 取得ページ削除
+    # -------------------------
+    if "source_page" in df.columns:
+        df = df.drop(columns=["source_page"])
+
+    # -------------------------
+    # Supabase安全化
+    # -------------------------
+    df = df.replace([np.nan, np.inf, -np.inf], None)
+
+    return df
+
 
 # =========================
 # Supabase insert
 # =========================
 def insert(df):
+
     BATCH_SIZE = 500
 
     records = df.to_dict(orient="records")
