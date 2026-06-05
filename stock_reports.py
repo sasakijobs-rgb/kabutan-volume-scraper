@@ -70,6 +70,8 @@ def insert(df):
         print("[SKIP] 今日データなし")
         return
 
+    df = df.drop_duplicates(subset=["code", "report_date"], keep="last")
+    
     records = df.to_dict("records")
 
     supabase.table(TABLE_NAME).upsert(
