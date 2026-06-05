@@ -2,7 +2,6 @@ import os
 import re
 import time
 import random
-import yaml
 import pandas as pd
 
 from supabase import create_client
@@ -10,44 +9,54 @@ from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
 from bs4 import BeautifulSoup
 
-# =========================
-# YAML読み込み
-# =========================
-with open("stock_reports.yaml", "r", encoding="utf-8") as f:
-    cfg = yaml.safe_load(f)
+# =========================================================
+# 🔧 パラメータ設定 one:1ページ目だけ select:ページ指定
+# =========================================================
 
-MODE = cfg["mode"]
-TABLE_NAME = cfg["supabase"]["table"]
-UNIQUE_KEYS = cfg["supabase"]["unique_keys"]
+MODE = "one"  
+# MODE = "select"
 
-# =========================
-# Supabase接続
-# =========================
+START_PAGE = 501
+END_PAGE = 600
+
+BASE_URL = "https://anarepo.kabucluster.com/?page={page}"
+
+SLEEP_RANGE = (0.5, 1.2)
+
+TABLE_NAME = "stock_reports"
+
+BATCH_SIZE = 500
+
+UNIQUE_KEYS = ["code", "report_date"]
+
+SAVE_CSV = False  # TrueにするとCSV保存
+
+# =========================================================
+# Supabase
+# =========================================================
 supabase = create_client(
     os.environ["SUPABASE_URL"],
     os.environ["SUPABASE_KEY"]
 )
 
-# =========================
-# ページ設定
-# =========================
+# =========================================================
+# ページ生成
+# =========================================================
 if MODE == "one":
     pages = [1]
 elif MODE == "select":
-    pages = range(cfg["pages"]["start"], cfg["pages"]["end"] + 1)
+    pages = range(START_PAGE, END_PAGE + 1)
 else:
-    raise ValueError("mode must be one or select")
+    raise ValueError("MODE must be 'one' or 'select'")
 
-# =========================
-# クレンジング
-# =========================
+# =========================================================
+# helper
+# =========================================================
 def clean_text(v):
     if v is None:
         return "-"
     v = str(v).replace("\n", " ").replace("\r", " ")
-    v = " ".join(v.split())
-    return v or "-"
-
+    return " ".join(v.split()) or "-"
 
 def clean_number(v):
     if v is None:
@@ -58,9 +67,9 @@ def clean_number(v):
         return "-"
     return float(v) if "." in v else int(v)
 
-# =========================
+# =========================================================
 # Selenium
-# =========================
+# =========================================================
 options = Options()
 options.add_argument("--headless=new")
 
@@ -69,21 +78,19 @@ driver = webdriver.Chrome(options=options)
 data = []
 seen = set()
 
-# =========================
+# =========================================================
 # scrape
-# =========================
+# =========================================================
 for page in pages:
 
-    url = f"https://anarepo.kabucluster.com/?page={page}"
+    url = BASE_URL.format(page=page)
     print("GET:", url)
 
     driver.get(url)
-    time.sleep(random.uniform(0.5, 1.2))
+    time.sleep(random.uniform(*SLEEP_RANGE))
 
     soup = BeautifulSoup(driver.page_source, "html.parser")
     rows = soup.select("tr.hover")
-
-    print(f"page={page} rows={len(rows)}")
 
     for row in rows:
 
@@ -91,8 +98,8 @@ for page in pages:
         if not th:
             continue
 
-        stock_text = clean_text(th.get_text(" ", strip=True))
-        parts = stock_text.split()
+        text = clean_text(th.get_text(" ", strip=True))
+        parts = text.split()
 
         if len(parts) < 2:
             continue
@@ -129,27 +136,26 @@ driver.quit()
 df = pd.DataFrame(data)
 print("rows:", len(df))
 
-# =========================
-# Supabase insert（upsert）
-# =========================
+# =========================================================
+# Supabase upsert
+# =========================================================
 def insert(df):
 
     df = df.replace("-", None)
-
     records = df.to_dict(orient="records")
 
     print(f"[UPSERT] {len(records)} rows")
 
-    for i in range(0, len(records), 500):
+    for i in range(0, len(records), BATCH_SIZE):
 
-        batch = records[i:i+500]
+        batch = records[i:i+BATCH_SIZE]
 
         supabase.table(TABLE_NAME).upsert(
             batch,
             on_conflict="code,report_date"
         ).execute()
 
-        print(f"{min(i+500, len(records))}/{len(records)}")
+        print(f"{min(i+BATCH_SIZE, len(records))}/{len(records)}")
 
 insert(df)
 
