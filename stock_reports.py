@@ -1,5 +1,5 @@
 # =========================
-# 日次処理 データ取得→supabaseへinsert
+# 日次処理 データ取得→supabaseへupload
 # =========================
 import pandas as pd
 import numpy as np
