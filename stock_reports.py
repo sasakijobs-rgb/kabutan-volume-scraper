@@ -1,7 +1,9 @@
+import os
 import pandas as pd
 import numpy as np
 from supabase import create_client
-import os
+
+# 既存のスクレイピング部分は df に結果が入っている前提
 
 # =========================
 # Supabase接続
@@ -12,15 +14,10 @@ supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
 TABLE_NAME = "stock_reports"
 
 # =========================
-# 前処理
+# 前処理（1ページ目向け簡略版）
 # =========================
 def preprocess(df: pd.DataFrame) -> pd.DataFrame:
-    # BOM除去
-    df.columns = df.columns.str.replace("\ufeff", "", regex=False).str.strip()
-    
-    # ハイフンや空文字をNaN
-    df = df.replace(["-", "―", "−", "ー", ""], np.nan)
-    
+
     # カラム名統一
     df = df.rename(columns={
         "銘柄コード": "code",
@@ -32,50 +29,61 @@ def preprocess(df: pd.DataFrame) -> pd.DataFrame:
         "レーティング": "rating",
         "目標株価": "target_price",
         "目標株価乖離率": "target_gap",
+        "取得ページ": "source_page",
     })
-    
-    # 数値変換
+
+    # 数値化
     for col in ["stock_price", "target_price", "target_gap"]:
         if col in df.columns:
-            df[col] = pd.to_numeric(df[col].astype(str)
-                                    .str.replace(",", "", regex=False)
-                                    .str.replace("%", "", regex=False)
-                                    .str.replace("円", "", regex=False), errors="coerce")
-    
+            df[col] = pd.to_numeric(df[col], errors="coerce")
+
     # 日付変換
     if "report_date" in df.columns:
         df["report_date"] = pd.to_datetime(
-            df["report_date"].astype(str).str.extract(r"(\d{4}/\d{2}/\d{2})")[0],
-            errors="coerce"
+            df["report_date"], errors="coerce"
         ).dt.strftime("%Y-%m-%d")
-    
+
     # Supabase安全化
     df = df.replace([np.nan, np.inf, -np.inf], None)
-    
+
+    # 今日分だけ
+    today = pd.Timestamp.today().strftime("%Y-%m-%d")
+    df = df[df["report_date"] == today]
+
+    # 重複排除
+    df = df.drop_duplicates(subset=["code", "report_date"]).reset_index(drop=True)
+
     return df
 
 # =========================
-# Supabaseへ送信
+# Supabaseに送信
 # =========================
 def insert(df: pd.DataFrame):
+    if df.empty:
+        print("[INFO] 本日分データなし")
+        return
+
+    batch_size = 500
     records = df.to_dict(orient="records")
-    supabase.table(TABLE_NAME).upsert(records, on_conflict="code,report_date").execute()
-    print(f"[INFO] {len(records)} rows upserted")
+
+    print(f"[INFO] insert: {len(records)} rows")
+
+    for i in range(0, len(records), batch_size):
+        batch = records[i:i+batch_size]
+        supabase.table(TABLE_NAME).upsert(
+            batch,
+            on_conflict="code,report_date"
+        ).execute()
+        print(f"[OK] {min(i+batch_size, len(records))}/{len(records)}")
 
 # =========================
-# main
+# 実行
 # =========================
 if __name__ == "__main__":
-    # ここでスクレイピングした1ページ目を df に格納
-    df = scrape_page1()  # ← 既存のスクレイピング関数
 
-    # 今日の日付だけ残す
-    today = pd.Timestamp.today().strftime("%Y-%m-%d")
-    df = df[df["report_date"] == today].reset_index(drop=True)
-    
-    if df.empty:
-        print("[INFO] 本日のデータなし")
-    else:
-        df = preprocess(df)
-        df = df.drop_duplicates(subset=["code", "report_date"]).reset_index(drop=True)
-        insert(df)
+    # ここに既存スクレイピングコードを入れて df を作成済みとする
+    # df = pd.DataFrame(data)  # ← 今のスクレイピング部分
+
+    df = preprocess(df)
+    insert(df)
+    print("処理完了")
