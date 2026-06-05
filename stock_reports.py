@@ -39,12 +39,12 @@ def resolve_file():
 def preprocess(df: pd.DataFrame) -> pd.DataFrame:
 
     # -------------------------
-    # BOM / 空白除去（超重要）
+    # BOM / 空白除去
     # -------------------------
     df.columns = df.columns.str.replace("\ufeff", "").str.strip()
 
     # -------------------------
-    # - / 欠損統一
+    # ハイフン統一
     # -------------------------
     df = df.replace(["-", "―", "−", "ー", ""], None)
 
@@ -65,7 +65,7 @@ def preprocess(df: pd.DataFrame) -> pd.DataFrame:
     })
 
     # -------------------------
-    # 数値変換（完全安全版）
+    # 数値変換（完全安全）
     # -------------------------
     num_cols = ["stock_price", "target_price", "target_gap"]
 
@@ -82,7 +82,7 @@ def preprocess(df: pd.DataFrame) -> pd.DataFrame:
             df[col] = pd.to_numeric(df[col], errors="coerce")
 
     # -------------------------
-    # 日付変換（JSON安全：文字列に固定）
+    # 日付変換（文字列固定）
     # -------------------------
     if "report_date" in df.columns:
 
@@ -98,34 +98,49 @@ def preprocess(df: pd.DataFrame) -> pd.DataFrame:
         ).dt.strftime("%Y-%m-%d")
 
     # -------------------------
-    # ページ削除
+    # 不要列削除
     # -------------------------
     if "source_page" in df.columns:
         df = df.drop(columns=["source_page"])
-
-    # -------------------------
-    # NaN / inf 完全除去（最重要）
-    # -------------------------
-    df = df.replace([np.nan, np.inf, -np.inf], None)
-
-    # -------------------------
-    # 追加安全処理（文字列NaN防止）
-    # -------------------------
-    df = df.map(
-        lambda x: None if x == "nan" else x
-    )
 
     return df
 
 
 # =========================
-# Supabase insert
+# Supabase送信用クリーニング（最重要）
+# =========================
+def sanitize_for_supabase(df: pd.DataFrame):
+
+    df = df.copy()
+
+    # 1. inf除去
+    df = df.replace([np.inf, -np.inf], None)
+
+    # 2. NaN除去（pandas標準）
+    df = df.where(pd.notnull(df), None)
+
+    # 3. dict化して最終クリーニング
+    records = df.to_dict(orient="records")
+
+    clean = []
+
+    for r in records:
+        clean.append({
+            k: (None if pd.isna(v) else v)
+            for k, v in r.items()
+        })
+
+    return clean
+
+
+# =========================
+# insert
 # =========================
 def insert(df):
 
     BATCH_SIZE = 500
 
-    records = df.to_dict(orient="records")
+    records = sanitize_for_supabase(df)
 
     print(f"[INFO] insert開始: {len(records)}件")
 
