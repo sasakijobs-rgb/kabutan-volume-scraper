@@ -63,22 +63,18 @@ jobs:
             cp output/today_data20.csv output/last_data20.csv
           fi
 
-      # =====================================
-      # commit
-      # =====================================
+      # =========================
+      # commit & push
+      # =========================
       - name: Commit results
         run: |
-          git config --global user.name "github-actions[bot]"
-          git config --global user.email "github-actions[bot]@users.noreply.github.com"
-
-          git pull --rebase origin main
-          
           git add output/*.csv
-          
+
           if git diff --cached --quiet; then
             echo "no changes"
             exit 0
           fi
-          
+
           git commit -m "update scraper result"
           git push origin main
+
