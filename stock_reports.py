@@ -1,162 +1,170 @@
-import os
-import re
-import time
-import random
+# =========================
+# 日次処理 データ取得→supabaseへinsert
+# =========================
 import pandas as pd
-
+import numpy as np
+import os
 from supabase import create_client
-from selenium import webdriver
-from selenium.webdriver.chrome.options import Options
-from bs4 import BeautifulSoup
 
-# =========================================================
-# 🔧 パラメータ設定 one:1ページ目だけ select:ページ指定
-# =========================================================
+# =========================
+# Supabase接続
+# =========================
+SUPABASE_URL = os.environ["SUPABASE_URL"]
+SUPABASE_KEY = os.environ["SUPABASE_KEY"]
 
-MODE = "one"  
-# MODE = "select"
-
-START_PAGE = 501
-END_PAGE = 600
-
-BASE_URL = "https://anarepo.kabucluster.com/?page={page}"
-
-SLEEP_RANGE = (0.5, 1.2)
+supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
 
 TABLE_NAME = "stock_reports"
 
-BATCH_SIZE = 500
+# =========================
+# 入力CSV
+# =========================
+IN_FILE = "EquityResearchReport.csv"
 
-UNIQUE_KEYS = ["code", "report_date"]
+# =========================
+# ファイルチェック
+# =========================
+def resolve_file():
+    file_path = f"output/{IN_FILE}"
 
-SAVE_CSV = False  # TrueにするとCSV保存
+    if not os.path.exists(file_path):
+        raise FileNotFoundError(f"CSVが見つかりません: {file_path}")
 
-# =========================================================
-# Supabase
-# =========================================================
-supabase = create_client(
-    os.environ["SUPABASE_URL"],
-    os.environ["SUPABASE_KEY"]
-)
+    return file_path
 
-# =========================================================
-# ページ生成
-# =========================================================
-if MODE == "one":
-    pages = [1]
-elif MODE == "select":
-    pages = range(START_PAGE, END_PAGE + 1)
-else:
-    raise ValueError("MODE must be 'one' or 'select'")
 
-# =========================================================
-# helper
-# =========================================================
-def clean_text(v):
-    if v is None:
-        return "-"
-    v = str(v).replace("\n", " ").replace("\r", " ")
-    return " ".join(v.split()) or "-"
+# =========================
+# 前処理
+# =========================
+def preprocess(df: pd.DataFrame) -> pd.DataFrame:
 
-def clean_number(v):
-    if v is None:
-        return "-"
-    v = str(v)
-    v = re.sub(r"[^\d\.\-]", "", v)
-    if v == "":
-        return "-"
-    return float(v) if "." in v else int(v)
+    # -------------------------
+    # BOM / 空白除去（超重要）
+    # -------------------------
+    df.columns = df.columns.str.replace("\ufeff", "").str.strip()
 
-# =========================================================
-# Selenium
-# =========================================================
-options = Options()
-options.add_argument("--headless=new")
+    # -------------------------
+    # - / 欠損統一
+    # -------------------------
+    df = df.replace(["-", "―", "−", "ー", ""], None)
 
-driver = webdriver.Chrome(options=options)
+    # -------------------------
+    # カラム名変換
+    # -------------------------
+    df = df.rename(columns={
+        "銘柄コード": "code",
+        "銘柄名": "name",
+        "現在株価": "stock_price",
+        "レポート公開日": "report_date",
+        "発表機関": "broker",
+        "レポートタイトル": "title",
+        "レーティング": "rating",
+        "目標株価": "target_price",
+        "目標株価乖離率": "target_gap",
+        "取得ページ": "source_page",
+    })
 
-data = []
-seen = set()
+    # -------------------------
+    # 数値変換（完全安全版）
+    # -------------------------
+    num_cols = ["stock_price", "target_price", "target_gap"]
 
-# =========================================================
-# scrape
-# =========================================================
-for page in pages:
+    for col in num_cols:
+        if col in df.columns:
+            df[col] = (
+                df[col]
+                .astype(str)
+                .str.replace(",", "", regex=False)
+                .str.replace("%", "", regex=False)
+                .str.replace("円", "", regex=False)
+            )
 
-    url = BASE_URL.format(page=page)
-    print("GET:", url)
+            df[col] = pd.to_numeric(df[col], errors="coerce")
 
-    driver.get(url)
-    time.sleep(random.uniform(*SLEEP_RANGE))
+    # -------------------------
+    # 日付変換（JSON安全：文字列に固定）
+    # -------------------------
+    if "report_date" in df.columns:
 
-    soup = BeautifulSoup(driver.page_source, "html.parser")
-    rows = soup.select("tr.hover")
+        df["report_date"] = (
+            df["report_date"]
+            .astype(str)
+            .str.extract(r"(\d{4}/\d{2}/\d{2})")[0]
+        )
 
-    for row in rows:
+        df["report_date"] = pd.to_datetime(
+            df["report_date"],
+            errors="coerce"
+        ).dt.strftime("%Y-%m-%d")
 
-        th = row.select_one("th a")
-        if not th:
-            continue
+    # -------------------------
+    # ページ削除
+    # -------------------------
+    if "source_page" in df.columns:
+        df = df.drop(columns=["source_page"])
 
-        text = clean_text(th.get_text(" ", strip=True))
-        parts = text.split()
+    # -------------------------
+    # NaN / inf 完全除去（最重要）
+    # -------------------------
+    df = df.replace([np.nan, np.inf, -np.inf], None)
 
-        if len(parts) < 2:
-            continue
+    # -------------------------
+    # 追加安全処理（文字列NaN防止）
+    # -------------------------
+    df = df.map(
+        lambda x: None if x == "nan" else x
+    )
 
-        code = parts[0]
-        name = parts[-1]
+    return df
 
-        tds = row.find_all("td")
-        if len(tds) < 8:
-            continue
 
-        report_date = clean_text(tds[2].get_text())
-
-        key = (code, report_date)
-        if key in seen:
-            continue
-        seen.add(key)
-
-        data.append({
-            "code": code,
-            "name": name,
-            "stock_price": clean_number(tds[1].get_text()),
-            "report_date": report_date,
-            "broker": clean_text(tds[3].get_text()),
-            "title": clean_text(tds[4].get_text(" ", strip=True)),
-            "rating": clean_text(tds[5].get_text(" ", strip=True)),
-            "target_price": clean_number(tds[6].get_text()),
-            "target_gap": clean_number(tds[7].get_text()),
-            "page": page
-        })
-
-driver.quit()
-
-df = pd.DataFrame(data)
-print("rows:", len(df))
-
-# =========================================================
-# Supabase upsert
-# =========================================================
+# =========================
+# Supabase insert
+# =========================
 def insert(df):
 
-    df = df.replace("-", None)
+    BATCH_SIZE = 500
+
     records = df.to_dict(orient="records")
 
-    print(f"[UPSERT] {len(records)} rows")
+    print(f"[INFO] insert開始: {len(records)}件")
 
     for i in range(0, len(records), BATCH_SIZE):
 
         batch = records[i:i+BATCH_SIZE]
 
-        supabase.table(TABLE_NAME).upsert(
-            batch,
-            on_conflict="code,report_date"
-        ).execute()
+        supabase.table(TABLE_NAME).insert(batch).execute()
 
-        print(f"{min(i+BATCH_SIZE, len(records))}/{len(records)}")
+        print(f"[OK] {min(i+BATCH_SIZE, len(records))}/{len(records)}")
 
-insert(df)
+    print("[DONE] 完了")
 
-print("DONE")
+
+# =========================
+# main
+# =========================
+if __name__ == "__main__":
+
+    file_path = resolve_file()
+
+    print("================================")
+    print("INPUT:", file_path)
+    print("================================")
+
+    df = pd.read_csv(
+        file_path,
+        skiprows=lambda x: x == 0 or "===" in str(x),
+        encoding="utf-8-sig"
+    )
+
+    df.columns = df.columns.str.replace("\ufeff", "").str.strip()
+
+    print("rows:", len(df))
+
+    df = preprocess(df)
+
+    print("================================")
+    print("preview")
+    print(df.head(3))
+
+    insert(df)
