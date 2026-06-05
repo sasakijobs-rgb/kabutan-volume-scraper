@@ -1,0 +1,70 @@
+name: nikkei scraper stable
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: nikkei-scraper
+  cancel-in-progress: true
+
+jobs:
+  scrape:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install selenium
+
+      - name: Install Google Chrome
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y google-chrome-stable
+
+      # =========================
+      # 重要：状態同期（安全版）
+      # =========================
+      - name: Sync repo
+        run: |
+          git config user.name github-actions
+          git config user.email github-actions@github.com
+
+          git fetch origin main
+          git reset --hard origin/main
+          git clean -fd
+
+      - name: Run scraper
+        run: python scraper_test.py
+
+      # =========================
+      # commit（安全判定あり）
+      # =========================
+      - name: Commit changes
+        run: |
+          git add output/nikkei_avg_data.csv
+
+          git diff --cached --quiet && echo "no changes" && exit 0
+
+          git commit -m "update nikkei data"
+
+      # =========================
+      # push（失敗を隠さない）
+      # =========================
+      - name: Push
+        run: |
+          git pull --rebase origin main
+          git push origin main
