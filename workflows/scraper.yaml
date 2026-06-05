@@ -1,4 +1,4 @@
-name: Kabutan Scraper
+name: Scraper
 
 on:
   workflow_dispatch:
