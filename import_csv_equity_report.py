@@ -136,7 +136,7 @@ if __name__ == "__main__":
 
     df = pd.read_csv(
          file_path,
-         skiprows=1,
+         skiprows=lambda x: x == 0 or "===" in str(x),
          encoding="utf-8-sig"
     )
     
