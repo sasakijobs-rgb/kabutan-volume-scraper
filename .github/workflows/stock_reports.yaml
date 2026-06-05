@@ -1,4 +1,8 @@
-mode: one   # one / select
+mode: one
+
+scraper:
+  base_url: "https://anarepo.kabucluster.com/?page={page}"
+  sleep_range: [0.5, 1.2]
 
 pages:
   start: 501
@@ -6,6 +10,7 @@ pages:
 
 supabase:
   table: stock_reports
+  batch_size: 500
   unique_keys:
     - code
     - report_date
