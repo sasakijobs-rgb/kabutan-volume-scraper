@@ -143,6 +143,11 @@ if __name__ == "__main__":
 
     df = preprocess(df)
 
+    df = (
+        df.drop_duplicates(subset=["code", "report_date"])
+          .reset_index(drop=True)
+    )
+
     print("================================")
     print("preview")
     print(df.head(3))
