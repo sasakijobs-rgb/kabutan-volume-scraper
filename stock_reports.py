@@ -34,7 +34,7 @@ def resolve_file():
 # =========================
 def preprocess(df: pd.DataFrame) -> pd.DataFrame:
 
-    # ★ BOM完全除去（重要）
+    # ★ BOM除去
     df.columns = df.columns.str.replace("\ufeff", "", regex=False).str.strip()
 
     # -------------------------
@@ -59,7 +59,7 @@ def preprocess(df: pd.DataFrame) -> pd.DataFrame:
     })
 
     # -------------------------
-    # 数値
+    # 数値変換
     # -------------------------
     for col in ["stock_price", "target_price", "target_gap"]:
         if col in df.columns:
@@ -73,7 +73,7 @@ def preprocess(df: pd.DataFrame) -> pd.DataFrame:
             df[col] = pd.to_numeric(df[col], errors="coerce")
 
     # -------------------------
-    # 日付（安全）
+    # 日付変換
     # -------------------------
     if "report_date" in df.columns:
         df["report_date"] = (
@@ -85,16 +85,28 @@ def preprocess(df: pd.DataFrame) -> pd.DataFrame:
         df["report_date"] = pd.to_datetime(
             df["report_date"],
             errors="coerce"
-        ).dt.strftime("%Y-%m-%d")
+        )
+
+    # =========================
+    # ★ここが重要：今日だけ残す
+    # =========================
+    today = pd.Timestamp.today().normalize()
+
+    df = df[df["report_date"] == today]
 
     # -------------------------
-    # 不要列
+    # 日付を文字列に戻す（Supabase用）
+    # -------------------------
+    df["report_date"] = df["report_date"].dt.strftime("%Y-%m-%d")
+
+    # -------------------------
+    # 不要列削除
     # -------------------------
     if "source_page" in df.columns:
         df = df.drop(columns=["source_page"])
 
     # -------------------------
-    # Supabase安全化（超重要）
+    # Supabase安全化
     # -------------------------
     df = df.replace([np.nan, np.inf, -np.inf], None)
 
@@ -143,24 +155,19 @@ if __name__ == "__main__":
 
     df = preprocess(df)
 
-    df = (
-        df.drop_duplicates(subset=["code", "report_date"])
-          .reset_index(drop=True)
-    )
+    # 重複削除（安全対策）
+    df = df.drop_duplicates(subset=["code", "report_date"]).reset_index(drop=True)
 
     print("================================")
     print("preview")
     print(df.head(3))
 
     print("report_date sample:")
-    print(df["report_date"].dropna().head(5))
+    print(df["report_date"].head(10))
 
     insert(df)
 
 print("================================")
 print("全件数確認:", len(df))
-print("report_date sample:")
-print(df['report_date'].head(10))
 print("code sample:")
-print(df['code'].head(10))
-
+print(df["code"].head(10))
