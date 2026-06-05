@@ -1,0 +1,14 @@
+mode: one   # one / select
+
+pages:
+  start: 501
+  end: 600
+
+supabase:
+  table: stock_reports
+  unique_keys:
+    - code
+    - report_date
+
+output:
+  save_csv: false
