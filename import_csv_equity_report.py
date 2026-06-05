@@ -141,7 +141,7 @@ if __name__ == "__main__":
          skiprows=lambda x: x == 0 or "===" in str(x),
          encoding="utf-8-sig"
     )
-    
+    df.columns = df.columns.str.replace("\ufeff", "").str.strip()
     print("rows:", len(df))
 
     df = preprocess(df)
