@@ -134,8 +134,12 @@ if __name__ == "__main__":
     print("INPUT:", file_path)
     print("================================")
 
-    df = pd.read_csv(file_path)
-
+    df = pd.read_csv(
+         file_path,
+         skiprows=1,
+         encoding="utf-8-sig"
+    )
+    
     print("rows:", len(df))
 
     df = preprocess(df)
