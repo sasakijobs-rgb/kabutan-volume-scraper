@@ -151,3 +151,11 @@ if __name__ == "__main__":
     print(df["report_date"].dropna().head(5))
 
     insert(df)
+
+print("================================")
+print("全件数確認:", len(df))
+print("report_date sample:")
+print(df['report_date'].head(10))
+print("code sample:")
+print(df['code'].head(10))
+
