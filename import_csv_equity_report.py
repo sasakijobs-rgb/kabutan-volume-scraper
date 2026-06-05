@@ -41,9 +41,8 @@ def preprocess(df: pd.DataFrame) -> pd.DataFrame:
 # =========================
 # Supabase insert
 # =========================
-BATCH_SIZE = 500
-
 def insert(df):
+    BATCH_SIZE = 500
 
     records = df.to_dict(orient="records")
 
