@@ -1,6 +1,3 @@
-# =========================
-# 日次処理 データ取得→supabaseへupload
-# =========================
 import pandas as pd
 import numpy as np
 import os
@@ -21,16 +18,15 @@ TABLE_NAME = "stock_reports"
 # =========================
 IN_FILE = "EquityResearchReport.csv"
 
+
 # =========================
-# ファイルチェック
+# ファイル
 # =========================
 def resolve_file():
-    file_path = f"output/{IN_FILE}"
-
-    if not os.path.exists(file_path):
-        raise FileNotFoundError(f"CSVが見つかりません: {file_path}")
-
-    return file_path
+    path = f"output/{IN_FILE}"
+    if not os.path.exists(path):
+        raise FileNotFoundError(path)
+    return path
 
 
 # =========================
@@ -38,18 +34,16 @@ def resolve_file():
 # =========================
 def preprocess(df: pd.DataFrame) -> pd.DataFrame:
 
-    # -------------------------
-    # BOM / 空白除去
-    # -------------------------
-    df.columns = df.columns.str.replace("\ufeff", "").str.strip()
+    # ★ BOM完全除去（重要）
+    df.columns = df.columns.str.replace("\ufeff", "", regex=False).str.strip()
 
     # -------------------------
     # ハイフン統一
     # -------------------------
-    df = df.replace(["-", "―", "−", "ー", ""], None)
+    df = df.replace(["-", "―", "−", "ー", ""], np.nan)
 
     # -------------------------
-    # カラム名変換
+    # rename
     # -------------------------
     df = df.rename(columns={
         "銘柄コード": "code",
@@ -65,11 +59,9 @@ def preprocess(df: pd.DataFrame) -> pd.DataFrame:
     })
 
     # -------------------------
-    # 数値変換（完全安全）
+    # 数値
     # -------------------------
-    num_cols = ["stock_price", "target_price", "target_gap"]
-
-    for col in num_cols:
+    for col in ["stock_price", "target_price", "target_gap"]:
         if col in df.columns:
             df[col] = (
                 df[col]
@@ -78,14 +70,12 @@ def preprocess(df: pd.DataFrame) -> pd.DataFrame:
                 .str.replace("%", "", regex=False)
                 .str.replace("円", "", regex=False)
             )
-
             df[col] = pd.to_numeric(df[col], errors="coerce")
 
     # -------------------------
-    # 日付変換（文字列固定）
+    # 日付（安全）
     # -------------------------
     if "report_date" in df.columns:
-
         df["report_date"] = (
             df["report_date"]
             .astype(str)
@@ -98,39 +88,17 @@ def preprocess(df: pd.DataFrame) -> pd.DataFrame:
         ).dt.strftime("%Y-%m-%d")
 
     # -------------------------
-    # 不要列削除
+    # 不要列
     # -------------------------
     if "source_page" in df.columns:
         df = df.drop(columns=["source_page"])
 
+    # -------------------------
+    # Supabase安全化（超重要）
+    # -------------------------
+    df = df.replace([np.nan, np.inf, -np.inf], None)
+
     return df
-
-
-# =========================
-# Supabase送信用クリーニング（最重要）
-# =========================
-def sanitize_for_supabase(df: pd.DataFrame):
-
-    df = df.copy()
-
-    # 1. inf除去
-    df = df.replace([np.inf, -np.inf], None)
-
-    # 2. NaN除去（pandas標準）
-    df = df.where(pd.notnull(df), None)
-
-    # 3. dict化して最終クリーニング
-    records = df.to_dict(orient="records")
-
-    clean = []
-
-    for r in records:
-        clean.append({
-            k: (None if pd.isna(v) else v)
-            for k, v in r.items()
-        })
-
-    return clean
 
 
 # =========================
@@ -138,21 +106,20 @@ def sanitize_for_supabase(df: pd.DataFrame):
 # =========================
 def insert(df):
 
-    BATCH_SIZE = 500
+    batch_size = 500
+    records = df.to_dict(orient="records")
 
-    records = sanitize_for_supabase(df)
+    print(f"[INFO] insert: {len(records)} rows")
 
-    print(f"[INFO] insert開始: {len(records)}件")
+    for i in range(0, len(records), batch_size):
+        batch = records[i:i+batch_size]
 
-    for i in range(0, len(records), BATCH_SIZE):
+        supabase.table(TABLE_NAME).upsert(
+            batch,
+            on_conflict="code,report_date"
+        ).execute()
 
-        batch = records[i:i+BATCH_SIZE]
-
-        supabase.table(TABLE_NAME).insert(batch).execute()
-
-        print(f"[OK] {min(i+BATCH_SIZE, len(records))}/{len(records)}")
-
-    print("[DONE] 完了")
+        print(f"[OK] {min(i+batch_size, len(records))}/{len(records)}")
 
 
 # =========================
@@ -172,8 +139,6 @@ if __name__ == "__main__":
         encoding="utf-8-sig"
     )
 
-    df.columns = df.columns.str.replace("\ufeff", "").str.strip()
-
     print("rows:", len(df))
 
     df = preprocess(df)
@@ -181,5 +146,8 @@ if __name__ == "__main__":
     print("================================")
     print("preview")
     print(df.head(3))
+
+    print("report_date sample:")
+    print(df["report_date"].dropna().head(5))
 
     insert(df)
