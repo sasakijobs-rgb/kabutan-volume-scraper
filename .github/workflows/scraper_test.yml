@@ -1,4 +1,4 @@
-name: nikkei scraper stable
+name: scraper_test
 
 on:
   workflow_dispatch:
