@@ -1,112 +1,81 @@
 import pandas as pd
+import numpy as np
+from supabase import create_client
 import os
-import time
-import random
-import requests
-from bs4 import BeautifulSoup
 
 # =========================
-# 設定
+# Supabase接続
 # =========================
-URL = "https://anarepo.kabucluster.com/?page=1"
-OUTPUT_FILE = "output/EquityResearchReport.csv"
-
-
-# =========================
-# テキスト処理
-# =========================
-def clean_text(v):
-    if v is None:
-        return "-"
-    return " ".join(str(v).replace("\n", " ").split())
-
-
-def clean_number(v):
-    if v is None:
-        return None
-
-    text = str(v).replace(",", "").replace("円", "").replace("%", "").strip()
-
-    import re
-    match = re.search(r"-?\d+(\.\d+)?", text)
-    if not match:
-        return None
-
-    num = match.group()
-    return float(num) if "." in num else int(num)
-
+SUPABASE_URL = os.environ["SUPABASE_URL"]
+SUPABASE_KEY = os.environ["SUPABASE_KEY"]
+supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
+TABLE_NAME = "stock_reports"
 
 # =========================
-# スクレイピング（page1固定）
+# 前処理
 # =========================
-def scrape_page1():
-
-    print(f"GET: {URL}")
-
-    res = requests.get(URL, timeout=10)
-    soup = BeautifulSoup(res.text, "html.parser")
-
-    rows = soup.select("tr.hover")
-
-    data = []
-
-    for row in rows:
-
-        th = row.select_one("th a")
-        if not th:
-            continue
-
-        stock_text = clean_text(th.get_text(" ", strip=True)).split()
-
-        if len(stock_text) < 2:
-            continue
-
-        code = stock_text[0]
-        name = stock_text[-1]
-
-        tds = row.find_all("td")
-        if len(tds) < 8:
-            continue
-
-        data.append({
-            "銘柄コード": code,
-            "銘柄名": name,
-            "現在株価": clean_number(tds[1].get_text()),
-            "レポート公開日": clean_text(tds[2].get_text()),
-            "発表機関": clean_text(tds[3].get_text()),
-            "レポートタイトル": clean_text(tds[4].get_text(" ", strip=True)),
-            "レーティング": clean_text(tds[5].get_text(" ", strip=True)),
-            "目標株価": clean_number(tds[6].get_text()),
-            "目標株価乖離率": clean_number(tds[7].get_text()),
-        })
-
-    return pd.DataFrame(data)
-
+def preprocess(df: pd.DataFrame) -> pd.DataFrame:
+    # BOM除去
+    df.columns = df.columns.str.replace("\ufeff", "", regex=False).str.strip()
+    
+    # ハイフンや空文字をNaN
+    df = df.replace(["-", "―", "−", "ー", ""], np.nan)
+    
+    # カラム名統一
+    df = df.rename(columns={
+        "銘柄コード": "code",
+        "銘柄名": "name",
+        "現在株価": "stock_price",
+        "レポート公開日": "report_date",
+        "発表機関": "broker",
+        "レポートタイトル": "title",
+        "レーティング": "rating",
+        "目標株価": "target_price",
+        "目標株価乖離率": "target_gap",
+    })
+    
+    # 数値変換
+    for col in ["stock_price", "target_price", "target_gap"]:
+        if col in df.columns:
+            df[col] = pd.to_numeric(df[col].astype(str)
+                                    .str.replace(",", "", regex=False)
+                                    .str.replace("%", "", regex=False)
+                                    .str.replace("円", "", regex=False), errors="coerce")
+    
+    # 日付変換
+    if "report_date" in df.columns:
+        df["report_date"] = pd.to_datetime(
+            df["report_date"].astype(str).str.extract(r"(\d{4}/\d{2}/\d{2})")[0],
+            errors="coerce"
+        ).dt.strftime("%Y-%m-%d")
+    
+    # Supabase安全化
+    df = df.replace([np.nan, np.inf, -np.inf], None)
+    
+    return df
 
 # =========================
-# 保存
+# Supabaseへ送信
 # =========================
-def save_csv(df):
-
-    os.makedirs("output", exist_ok=True)
-
-    df.to_csv(
-        OUTPUT_FILE,
-        index=False,
-        encoding="utf-8-sig"
-    )
-
-    print(f"[SAVE] {OUTPUT_FILE} rows={len(df)}")
-
+def insert(df: pd.DataFrame):
+    records = df.to_dict(orient="records")
+    supabase.table(TABLE_NAME).upsert(records, on_conflict="code,report_date").execute()
+    print(f"[INFO] {len(records)} rows upserted")
 
 # =========================
 # main
 # =========================
 if __name__ == "__main__":
+    # ここでスクレイピングした1ページ目を df に格納
+    df = scrape_page1()  # ← 既存のスクレイピング関数
 
-    df = scrape_page1()
-
-    print("raw rows:", len(df))
-    print(df.head(3))
-
-    save_csv(df)
+    # 今日の日付だけ残す
+    today = pd.Timestamp.today().strftime("%Y-%m-%d")
+    df = df[df["report_date"] == today].reset_index(drop=True)
+    
+    if df.empty:
+        print("[INFO] 本日のデータなし")
+    else:
+        df = preprocess(df)
+        df = df.drop_duplicates(subset=["code", "report_date"]).reset_index(drop=True)
+        insert(df)
