@@ -2,7 +2,6 @@ import csv
 import os
 import time
 from datetime import datetime
-from re
 
 from selenium import webdriver
 from selenium.webdriver.common.by import By
