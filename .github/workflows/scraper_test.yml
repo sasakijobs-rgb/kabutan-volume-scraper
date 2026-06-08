@@ -1,7 +1,7 @@
 name: scraper test
 
 on:
-  workflow_dispatch:  # 手動実行用
+  workflow_dispatch:
 
 jobs:
   run-scraper:
@@ -16,29 +16,14 @@ jobs:
         with:
           python-version: "3.11"
 
-      - name: Install system dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y \
-            wget \
-            unzip \
-            curl \
-            fonts-liberation \
-            libnss3 \
-            libxss1 \
-            libappindicator3-1 \
-            libgbm-dev \
-            libasound2t64 || true
-
-      - name: Install Google Chrome
-        run: |
-          wget https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb
-          sudo apt-get install -y ./google-chrome-stable_current_amd64.deb
-
       - name: Install Python dependencies
         run: |
-          pip install --upgrade pip
+          python -m pip install --upgrade pip
           pip install selenium
+
+      # デバッグ用（ファイル確認したい場合）
+      - name: List files
+        run: ls -R
 
       - name: Run scraper
         run: |
