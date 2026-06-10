@@ -144,6 +144,10 @@ if __name__ == "__main__":
     # ② 前処理
     df = preprocess(df)
 
+    # ★ === を含む行を削除（安全フィルタ）
+    mask = ~df.astype(str).apply(lambda col: col.str.contains("===", na=False)).any(axis=1)
+    df = df[mask]
+    
     print("filtered:", len(df))
 
     # ③ Supabase送信
