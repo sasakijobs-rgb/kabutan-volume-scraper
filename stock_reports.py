@@ -64,9 +64,7 @@ def scrape_page1():
         if key in seen:
             continue
         seen.add(key)
-        # ★ここで === を含むもの(header)を弾く
-        if "===" in code or "===" in name or "===" in report_date:
-            continue
+            
         data.append({
             "銘柄コード": code,
             "銘柄名": name,
