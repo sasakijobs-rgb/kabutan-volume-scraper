@@ -75,9 +75,9 @@ def main():
         # =========================
         print("[STEP 2/4] data2csv.py 実行")
 
-        # if not run_py("data2csv.py"):
-        #     print("[ABORT] data2csv失敗")
-        #     return
+        if not run_py("data2csv.py"):
+            print("[ABORT] data2csv失敗")
+            return
         print("[STEP 2.5] last_data20.csv 更新（正常終了）")
         update_last()
 
