@@ -52,6 +52,12 @@ jobs:
       - name: Run data2csv
         run: python data2csv.py
 
+      - name: Run import csv to supabase
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
+        run: python import_csv_to_supabase.py
+
       - name: Show generated files
         if: always()
         run: |
