@@ -31,7 +31,7 @@ jobs:
         run: mkdir -p output
 
       - name: Run data2csv
-        run: data2csv.py
+        run: python data2csv.py
         
       - name: Run nikkei_avg_data
         run: python nikkei_avg_data.py
