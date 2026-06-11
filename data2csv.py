@@ -336,7 +336,7 @@ def main():
         # =========================
         if len(all_data) % 2000 < len(data):
 
-            sleep_sec = 180 + random.randint(-30, 30)
+            sleep_sec = 60 + random.randint(-30, 30)
 
             log(f"[SLEEP] 2000件到達 -> {sleep_sec}秒休憩")
 
