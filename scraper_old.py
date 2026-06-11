@@ -84,10 +84,10 @@ def main():
         # =========================
         # STEP 3
         # =========================
-        # print("[STEP 3/4] nikkei_vi_data.py 実行")
+        print("[STEP 3/4] nikkei_vi_data.py 実行")
 
-        # if not run_py("nikkei_vi_data.py"):
-        #     print("[WARN] nikkei_vi_data.py失敗（継続）")
+        if not run_py("nikkei_vi_data.py"):
+           print("[WARN] nikkei_vi_data.py失敗（継続）")
 
         # =========================
         # STEP 3.5
