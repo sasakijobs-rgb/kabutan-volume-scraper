@@ -1,4 +1,4 @@
-name: Run Stock Scraper
+name: Run Stock Scraper_test
 
 on:
   schedule:
