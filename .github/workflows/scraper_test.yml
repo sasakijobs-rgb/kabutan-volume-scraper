@@ -1,36 +1,47 @@
-name: output_test
+name: nikkei_data_test
 
 on:
   workflow_dispatch:
-  push:
-    branches: [ "main" ]
 
 jobs:
-  run-script:
+  scrape:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout repository
+      - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Set up Python
+      - name: Setup Python
         uses: actions/setup-python@v5
         with:
           python-version: "3.11"
 
-      - name: Install dependencies
+      - name: Install Chrome
+        uses: browser-actions/setup-chrome@v1
+
+      - name: Install packages
         run: |
           python -m pip install --upgrade pip
-          pip install requests beautifulsoup4
+          pip install selenium requests beautifulsoup4
 
       - name: Create output directory
         run: mkdir -p output
 
-      - name: Run script
-        run: python data2csv.py
+      - name: Run Nikkei Average
+        run: python nikkei_avg.py
 
-      - name: Upload output artifacts
+      - name: Run Nikkei VI
+        run: python nikkei_vi.py
+
+      - name: Show generated files
+        if: always()
+        run: |
+          echo "===== output ====="
+          ls -lah output
+
+      - name: Upload artifacts
+        if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: output-files
+          name: nikkei-output
           path: output/
