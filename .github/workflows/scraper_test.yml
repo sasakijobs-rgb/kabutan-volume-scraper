@@ -30,9 +30,6 @@ jobs:
       - name: Create output directory
         run: mkdir -p output
 
-      - name: Run data2csv
-        run: python data2csv.py
-        
       - name: Run nikkei_avg_data
         run: python nikkei_avg_data.py
 
@@ -48,6 +45,9 @@ jobs:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
         run: python stock_reports.py        
+
+      - name: Run data2csv
+        run: python data2csv.py
 
       - name: Show generated files
         if: always()
