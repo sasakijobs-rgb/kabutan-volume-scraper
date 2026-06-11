@@ -3,7 +3,7 @@ name: DataScraper
 on:
   workflow_dispatch:
   schedule:
-    - cron: "0 7 * * *"
+    - cron: "0 7 * * *"   # 1日1回だけ
 
 permissions:
   contents: write
@@ -11,15 +11,21 @@ permissions:
 concurrency:
   group: scraper
   cancel-in-progress: true
-  
+
 jobs:
   scrape:
     runs-on: ubuntu-latest
 
     steps:
+      # =========================
+      # checkout
+      # =========================
       - name: Checkout
         uses: actions/checkout@v4
 
+      # =========================
+      # python
+      # =========================
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
@@ -30,17 +36,28 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
+      # =========================
+      # Chrome（scraper用）
+      # =========================
       - name: Install Google Chrome
         run: |
           wget https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb
           sudo apt-get update
           sudo apt-get install -y ./google-chrome-stable_current_amd64.deb
 
-      - name: Create start marker
+      # =========================
+      # ★① stock_reports（追加）
+      # =========================
+      - name: Run stock reports
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
         run: |
-          date
-          touch /tmp/job_start_marker
+          python stock_reports.py
 
+      # =========================
+      # ★② scraper本体
+      # =========================
       - name: Run scraper
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
@@ -48,15 +65,23 @@ jobs:
         run: |
           python scraper.py
 
+      # =========================
+      # output確認
+      # =========================
+      - name: Create start marker
+        run: |
+          date
+          touch /tmp/job_start_marker
+
       - name: Check output
         run: |
           echo "===== output (after job start) ====="
           find output -type f -newer /tmp/job_start_marker \
           -exec ls -lh --time-style="+%Y-%m-%d %H:%M:%S" {} \;
 
-      # =====================================
-      # ★ここが追加（lastへコピー）
-      # =====================================
+      # =========================
+      # copy処理
+      # =========================
       - name: Copy today to last
         run: |
           if [ -f output/today_data20.csv ]; then
@@ -78,9 +103,7 @@ jobs:
             exit 0
           fi
 
-          git commit -m "update scraper result"
+          git commit -m "daily scraper + stock reports update"
 
-          # ★追加：リモートの変更を取り込む
           git pull --rebase origin main
-
           git push origin main
