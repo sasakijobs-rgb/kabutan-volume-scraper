@@ -99,6 +99,7 @@ jobs:
             exit 0
           fi
 
-          git add output/*.csv || true
-          git commit -m "daily scraper + stock reports update" || exit 0
-          git push origin HEAD:main
+          git add output/*.csv
+          git commit -m "daily update" || exit 0
+          git push origin HEAD:main --force
+
