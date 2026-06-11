@@ -1,9 +1,9 @@
-name: Run Stock Scraper_test
+name: output_test
 
 on:
-  schedule:
-    - cron: "0 7 * * *"  # JST 16:00 (UTC 07:00)
-  workflow_dispatch:  # 手動実行用
+  workflow_dispatch:
+  push:
+    branches: [ "main" ]
 
 jobs:
   run-script:
@@ -18,23 +18,18 @@ jobs:
         with:
           python-version: "3.11"
 
-      - name: Install system dependencies (for Selenium)
+      - name: Install dependencies
         run: |
-          sudo apt-get update
-          sudo apt-get install -y \
-            chromium-browser \
-            chromium-chromedriver
+          python -m pip install --upgrade pip
+          pip install requests beautifulsoup4
 
-      - name: Install Python dependencies
-        run: |
-          pip install --upgrade pip
-          pip install requests beautifulsoup4 selenium
+      - name: Create output directory
+        run: mkdir -p output
 
       - name: Run script
-        run: |
-          python your_script.py
+        run: python data2csv.py
 
-      - name: Upload output CSV
+      - name: Upload output artifacts
         uses: actions/upload-artifact@v4
         with:
           name: output-files
