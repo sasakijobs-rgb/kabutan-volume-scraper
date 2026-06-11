@@ -1,4 +1,4 @@
-name: stock_reports_daily_run
+name: stock_reports
 
 on:
   schedule:
