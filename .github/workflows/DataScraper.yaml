@@ -72,14 +72,15 @@ jobs:
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
           git add output/*.csv
-      
+
           if git diff --cached --quiet; then
             echo "no changes"
             exit 0
           fi
-      
+
           git commit -m "update scraper result"
+
+          # ★追加：リモートの変更を取り込む
+          git pull --rebase origin main
+
           git push origin main
-      
-      
-          
