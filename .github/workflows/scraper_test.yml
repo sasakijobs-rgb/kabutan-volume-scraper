@@ -27,11 +27,11 @@ jobs:
       - name: Create output directory
         run: mkdir -p output
 
-      - name: Run Nikkei Average
-        run: python nikkei_avg.py
+      - name: Run nikkei_avg_data
+        run: python nikkei_avg_data.py
 
-      - name: Run Nikkei VI
-        run: python nikkei_vi.py
+      - name: Run nikkei_vi_data
+        run: python nikkei_vi_data.py
 
       - name: Show generated files
         if: always()
