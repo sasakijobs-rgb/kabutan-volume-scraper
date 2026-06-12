@@ -9,6 +9,7 @@
 # →nikkei_avg_data.csvを更新
 # →data2csv.py
 # (株探のモバイル版からデータを取得）
+# →stock_reports（アナリストレポートデータ）…直接supabaseへ
 # →supabaseへcsvを反映する
 # =========================
 import os
@@ -63,7 +64,7 @@ def main():
         # =========================
         # STEP 1
         # =========================
-        print("[STEP 1/4] cleanup.py 実行")
+        print("[STEP 1/5] cleanup.py 実行")
 
         if not run_py("cleanup.py"):
             print("[ABORT] cleanup失敗")
@@ -73,7 +74,7 @@ def main():
         # =========================
         # STEP 2
         # =========================
-        print("[STEP 2/4] nikkei_vi_data.py 実行")
+        print("[STEP 2/5] nikkei_vi_data.py 実行")
 
         if not run_py("nikkei_vi_data.py"):
            print("[WARN] nikkei_vi_data.py失敗（継続）")
@@ -91,7 +92,7 @@ def main():
         # =========================
         # STEP 3
         # =========================
-        print("[STEP 3/4] scraper.py 実行")
+        print("[STEP 3/5] scraper.py 実行")
 
         if not run_py("scraper.py"):
            print("[ABORT] scraper 失敗")
@@ -102,10 +103,20 @@ def main():
         # =========================
         # STEP 4
         # =========================
-        print("[STEP 4/4] import_csv_to_supabase.py 実行")
+        print("[STEP 4/5] stock_reports.py 実行")
+
+        if not run_py("stock_reports.py"):
+            print("[WARN] stock_reports 失敗（継続）")
+        print("[STEP 4] stock_reports （正常終了）")
+
+        # =========================
+        # STEP 5
+        # =========================
+        print("[STEP 5/5] import_csv_to_supabase.py 実行")
 
         if not run_py("import_csv_to_supabase.py"):
             print("[WARN] Supabase反映失敗（継続）")
+        print("[STEP 5] import_csv_to_supabase （正常終了）")
 
     except Exception as e:
         print(f"[ERROR] {e}")
