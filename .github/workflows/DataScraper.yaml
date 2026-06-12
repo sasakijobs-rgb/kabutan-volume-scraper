@@ -44,26 +44,17 @@ jobs:
       - name: Create output directory
         run: mkdir -p output
 
-      - name: Run nikkei_avg_data
-        run: python nikkei_avg_data.py
-
-      - name: Run nikkei_vi_data
-        run: python nikkei_vi_data.py
-
-      - name: Run stock reports scraper
+      - name: Run stock reports
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
         run: python stock_reports.py        
 
-      - name: Run data2csv
-        run: python data2csv.py
-
-      - name: Run import csv to supabase
+      - name: Run scraper
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
-        run: python import_csv_to_supabase.py
+        run: python scraper.py
 
       - name: Show generated files
         if: always()
@@ -84,6 +75,32 @@ jobs:
           name: nikkei-output
           path: output/
 
+      # =========================
+      # output確認
+      # =========================
+      - name: Create start marker
+        run: |
+          date
+          touch /tmp/job_start_marker
+
+      - name: Check output
+        run: |
+          echo "===== output (after job start) ====="
+          find output -type f -newer /tmp/job_start_marker \
+          -exec ls -lh --time-style="+%Y-%m-%d %H:%M:%S" {} \;
+
+      # =========================
+      # copy処理
+      # =========================
+      - name: Copy today to last
+        run: |
+          if [ -f output/today_data20.csv ]; then
+            cp output/today_data20.csv output/last_data20.csv
+          fi
+
+      # =========================
+      # commit
+      # =========================
       - name: Commit CSV files to repository
         if: success()
         run: |
