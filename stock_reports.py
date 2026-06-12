@@ -1,156 +1,199 @@
-import os
-import re
-import time
-import random
 import pandas as pd
 import numpy as np
-
-from selenium import webdriver
-from selenium.webdriver.chrome.options import Options
-from bs4 import BeautifulSoup
+import re
+from datetime import datetime
+import os
 from supabase import create_client
 
+
 # =========================
-# Supabase
+# Supabase接続
 # =========================
 SUPABASE_URL = os.environ["SUPABASE_URL"]
-SUPABASE_KEY = os.environ["SUPABASE_KEY"]
-supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
+SUPABASE_ANON_KEY = os.environ["SUPABASE_ANON_KEY"]
 
-TABLE_NAME = "stock_reports"
+supabase = create_client(SUPABASE_URL, SUPABASE_ANON_KEY)
 
-# =========================
-# スクレイピング
-# =========================
-def scrape_page1():
+TABLE_NAME = "trading_value_ranking"
 
-    options = Options()
-    options.add_argument("--headless=new")
-    options.add_argument("--disable-gpu")
-
-    driver = webdriver.Chrome(options=options)
-
-    url = "https://anarepo.kabucluster.com/?page=1"
-    driver.get(url)
-
-    time.sleep(random.choice([0.5, 1.0, 1.5]))
-
-    soup = BeautifulSoup(driver.page_source, "html.parser")
-    rows = soup.select("tr.hover")
-
-    data = []
-    seen = set()
-
-    for row in rows:
-
-        th = row.select_one("th a")
-        if not th:
-            continue
-
-        stock_text = th.get_text(" ", strip=True).split()
-        if len(stock_text) < 2:
-            continue
-
-        code = stock_text[0]
-        name = stock_text[-1]
-
-        tds = row.find_all("td")
-        if len(tds) < 8:
-            continue
-
-        report_date = tds[2].get_text(strip=True)
-
-        key = (code, report_date)
-        if key in seen:
-            continue
-        seen.add(key)
-            
-        data.append({
-            "銘柄コード": code,
-            "銘柄名": name,
-            "現在株価": tds[1].get_text(strip=True),
-            "レポート公開日": report_date,
-            "発表機関": tds[3].get_text(strip=True),
-            "レポートタイトル": tds[4].get_text(strip=True),
-            "レーティング": tds[5].get_text(strip=True),
-            "目標株価": tds[6].get_text(strip=True),
-            "目標株価乖離率": tds[7].get_text(strip=True),
-        })
-
-    driver.quit()
-
-    return pd.DataFrame(data)
 
 # =========================
-# 前処理
+# 入力CSV
 # =========================
-def preprocess(df):
+inFile = "today"
+# inFile = "trading_value_ranking_20260529.csv"
 
-    df.columns = df.columns.str.replace("\ufeff", "", regex=False).str.strip()
-    df = df.replace(["-", "―", "−", "ー", ""], np.nan)
+# =========================
+# ファイル解決
+# =========================
+def resolve_input_file(inFile: str) -> str:
 
-    df = df.rename(columns={
-        "銘柄コード": "code",
-        "銘柄名": "name",
-        "現在株価": "stock_price",
-        "レポート公開日": "report_date",
-        "発表機関": "broker",
-        "レポートタイトル": "title",
-        "レーティング": "rating",
-        "目標株価": "target_price",
-        "目標株価乖離率": "target_gap",
-    })
+    if inFile == "today":
+        today = datetime.now().strftime("%Y%m%d")
+        file_path = f"output/trading_value_ranking_{today}.csv"
+    else:
+        file_path = f"output/{inFile}"
 
-    for col in ["stock_price", "target_price", "target_gap"]:
-        if col in df.columns:
-            df[col] = pd.to_numeric(df[col], errors="coerce")
+    if not os.path.exists(file_path):
+        raise FileNotFoundError(f"ファイルが存在しません: {file_path}")
 
-    df["report_date"] = pd.to_datetime(
-        df["report_date"], errors="coerce"
-    ).dt.strftime("%Y-%m-%d")
+    return file_path
 
-    df = df.replace([np.nan, np.inf, -np.inf], None)
+
+# =========================
+# 数値クレンジング（そのまま維持）
+# =========================
+def clean_financial_value(x):
+
+    if pd.isna(x):
+        return None
+
+    x = str(x).strip()
+
+    if "ー" in x or x in ["-", "―", "−"]:
+        return None
+
+    x = x.replace("倍", "")
+    x = x.replace("％", "")
+    x = x.replace("%", "")
+
+    x = re.sub(r"[^0-9.\-]", "", x)
+
+    if x == "":
+        return None
+
+    try:
+        return float(x)
+    except:
+        return None
+
+
+# =========================
+# ETL（完全版）
+# =========================
+COLUMN_MAP = {
+    "日付": "ymd",
+    "順位": "rank",
+    "銘柄名": "name",
+    "コード": "code",
+    "市場": "market",
+    "状態": "status",
+    "株価": "stock_price",
+    "前日差": "diff_price",
+    "騰落率": "diff_percent",
+    "売買代金": "trade_value",
+    "PER": "per",
+    "PBR": "pbr",
+    "配当利回り": "yld",
+}
+
+
+def preprocess_df(df: pd.DataFrame) -> pd.DataFrame:
+
+    # 日本語 → ローマ字
+    df = df.rename(columns=COLUMN_MAP)
+
+    # ---- カンマ除去 ----
+    comma_cols = [
+        "stock_price",
+        "diff_price",
+        "trade_value"
+    ]
+    for col in comma_cols:
+        df[col] = (
+            df[col]
+            .astype(str)
+            .str.replace(",", "", regex=False)
+            .str.replace("+", "", regex=False)
+        )
+
+    # 数値系（安全変換）
+    df["rank"] = pd.to_numeric(df["rank"], errors="coerce").astype("Int64")
+    df["trade_value"] = pd.to_numeric(df["trade_value"], errors="coerce").astype("Int64")
+
+    df["stock_price"] = pd.to_numeric(df["stock_price"], errors="coerce")
+    df["diff_price"] = pd.to_numeric(df["diff_price"], errors="coerce")
+
+    # 騰落率
+    df["diff_percent"] = (
+        df["diff_percent"]
+        .astype(str)
+        .str.replace("%", "", regex=False)
+        .str.replace("％", "", regex=False)
+    )
+    df["diff_percent"] = pd.to_numeric(df["diff_percent"], errors="coerce")
+
+    # PER / PBR / YLD（元ロジック維持）
+    df["per"] = df["per"].apply(clean_financial_value)
+    df["pbr"] = df["pbr"].apply(clean_financial_value)
+    df["yld"] = df["yld"].apply(clean_financial_value)
+
+    # NaN → None（Supabase対策）
+    df = df.where(pd.notnull(df), None)
 
     return df
 
 # =========================
-# Supabase
+# NaN / NA / inf を完全排除
 # =========================
-def insert(df):
+def clean_for_supabase(df):
+    df = df.copy()
+    df = df.replace([np.nan, np.inf, -np.inf], None)
+    return df
 
-    if df.empty:
-        print("[INFO] データなし")
-        return
+# =========================
+# Supabase投入
+# =========================
+BATCH_SIZE = 500
 
-    records = df.to_dict(orient="records")
+def insert_to_supabase(df):
 
-    supabase.table(TABLE_NAME).upsert(
-        records,
-        on_conflict="code,report_date"
-    ).execute()
+    data = df.to_dict(orient="records")
+    total = len(data)
 
-    print(f"[OK] {len(records)} rows upserted")
+    print(f"[INFO] 開始: {total}件")
+
+    for i in range(0, total, BATCH_SIZE):
+
+        batch = data[i:i+BATCH_SIZE]
+
+        supabase.table(TABLE_NAME).insert(batch).execute()
+
+        print(
+            f"[INFO] "
+            f"{min(i+BATCH_SIZE, total)}/{total} 件完了"
+        )
+
+    print("[INFO] Supabase反映完了")
 
 # =========================
 # main
 # =========================
 if __name__ == "__main__":
 
-    # ① まずスクレイピング
-    df = scrape_page1()
+    file_path = resolve_input_file(inFile)
 
-    print("raw:", len(df))
+    print("================================")
+    print("読み込み:", file_path)
+    print("================================")
 
-    # ② 前処理
-    df = preprocess(df)
+    df = pd.read_csv(file_path)
 
-    # ★ === を含む行を削除（安全フィルタ）
-    mask = ~df.astype(str).apply(lambda col: col.str.contains("===", na=False)).any(axis=1)
-    df = df[mask]
+    print("元件数:", len(df))
+    print("元カラム:", df.columns.tolist())
+
+    df = preprocess_df(df)
+
+    print("================================")
+    print("データのclean:", file_path)
+    print("================================")
+    df = clean_for_supabase(df)
+
     
-    print("filtered:", len(df))
+    print("================================")
+    print("変換後カラム:", df.columns.tolist())
+    print(df.head(3))
 
-    # ③ Supabase送信
-    insert(df)
+    insert_to_supabase(df)
 
     print("DONE")
