@@ -3,8 +3,7 @@ name: DataScraper
 on:
   workflow_dispatch:
   schedule:
-  - cron: "0 16 * * *"   # 16:00日本時間
-    timezone: "Asia/Tokyo"
+  - cron: "0 7 * * *"  # 16:00日本時間
 
 permissions:
   contents: write
@@ -42,65 +41,57 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y ./google-chrome-stable_current_amd64.deb
 
-      # =========================
-      # ★① stock_reports（追加）
-      # =========================
-      - name: Run stock reports
+      - name: Create output directory
+        run: mkdir -p output
+
+      - name: Run nikkei_avg_data
+        run: python nikkei_avg_data.py
+
+      - name: Run nikkei_vi_data
+        run: python nikkei_vi_data.py
+
+      - name: Run stock reports scraper
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
-        run: |
-          python stock_reports.py
+        run: python stock_reports.py        
 
-      # =========================
-      # ★② scraper本体
-      # =========================
-      - name: Run scraper
+      - name: Run data2csv
+        run: python data2csv.py
+
+      - name: Run import csv to supabase
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
-        run: |
-          python scraper.py
+        run: python import_csv_to_supabase.py
 
-      # =========================
-      # output確認
-      # =========================
-      - name: Create start marker
+      - name: Show generated files
+        if: always()
         run: |
-          date
-          touch /tmp/job_start_marker
+          echo "===== CURRENT DIR ====="
+          pwd
 
-      - name: Check output
-        run: |
-          echo "===== output (after job start) ====="
-          find output -type f -newer /tmp/job_start_marker \
-          -exec ls -lh --time-style="+%Y-%m-%d %H:%M:%S" {} \;
+          echo "===== OUTPUT ====="
+          ls -lah output || true
 
-      # =========================
-      # copy処理
-      # =========================
-      - name: Copy today to last
-        run: |
-          if [ -f output/today_data20.csv ]; then
-            cp output/today_data20.csv output/last_data20.csv
-          fi
+          echo "===== ALL FILES ====="
+          find . -type f | sort
 
-      # =========================
-      # commit & push
-      # =========================
-      - name: Commit results
+      - name: Upload artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: nikkei-output
+          path: output/
+
+      - name: Commit CSV files to repository
+        if: success()
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
           git add output/*.csv
 
-          if git diff --cached --quiet; then
-            echo "no changes"
-            exit 0
-          fi
+          git diff --staged --quiet || git commit -m "Update Nikkei CSV files"
 
-          git add output/*.csv
-          git commit -m "daily update" || exit 0
-          git push origin HEAD:main --force
-
+          git push
