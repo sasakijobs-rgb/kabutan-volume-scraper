@@ -11,9 +11,8 @@ RUN_CLEANUP = True
 RUN_NIKKEI_VI = True
 RUN_NIKKEI_AVG = True
 RUN_DATA2CSV = True
-RUN_STOCK_REPORTS = True
-RUN_SUPABASE = True
-
+RUN_DB_STOCK_REPORTS = True
+RUN_DB_TRADING_VALUE = True
 
 # =========================
 # subprocess実行
@@ -51,12 +50,11 @@ def step_nikkei_avg():
 def step_data2csv():
     return run_py("data2csv.py")
 
-def step_stock_reports():
-    return run_py("stock_reports.py")
+def step_db_stock_reports():
+    return run_py("DB_stock_reports.py")
 
-def step_supabase():
-    return run_py("import_csv_to_supabase.py")
-
+def step_db_trading_value():
+    return run_py("DB_Trading_value.py")
 
 # =========================
 # フル実行
@@ -93,13 +91,13 @@ def run_full():
         update_last()
 
     # 5. stock reports
-    if RUN_STOCK_REPORTS:
-        step_stock_reports()
+    if RUN_DB_STOCK_REPORTS:
+        step_db_stock_reports()
 
-    # 6. supabase
-    if RUN_SUPABASE:
-        step_supabase()
-
+    # 6. trading value
+    if RUN_DB_TRADING_VALUE:
+        step_db_trading_value()
+    
     print("\n===== FULL RUN END =====")
 
 
@@ -128,12 +126,12 @@ def main():
         step_data2csv()
         return
 
-    if mode == "stock_reports":
-        step_stock_reports()
+    if mode == "db_stock_reports":
+        step_db_stock_reports()
         return
 
-    if mode == "supabase":
-        step_supabase()
+    if mode == "db_trading_value":
+        step_db_trading_value()
         return
 
     # 通常フル実行
