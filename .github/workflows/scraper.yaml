@@ -32,6 +32,7 @@ jobs:
         run: |
           echo "SUPABASE_URL=$SUPABASE_URL"
           echo "SUPABASE_ANON_KEY=$SUPABASE_ANON_KEY"
+          echo "secrets.SUPABASE_ANON_KEY=${{ secrets.SUPABASE_ANON_KEY }}"
         
       - name: Checkout
         uses: actions/checkout@v4
