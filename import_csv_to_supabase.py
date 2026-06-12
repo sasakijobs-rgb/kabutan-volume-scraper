@@ -10,7 +10,7 @@ from supabase import create_client
 # Supabase接続
 # =========================
 SUPABASE_URL = os.environ["SUPABASE_URL"]
-SUPABASE_KEY = os.environ["SUPABASE_ANON_KEY"]
+SUPABASE_ANON_KEY = os.environ["SUPABASE_ANON_KEY"]
 
 supabase = create_client(SUPABASE_URL, SUPABASE_ANON_KEY)
 
