@@ -29,7 +29,7 @@ jobs:
 
     steps:
       # -----------------------
-      # 時間判定（JST）
+      # ① 時間判定（追加のみ）
       # -----------------------
       - name: Time check
         id: time
@@ -46,43 +46,38 @@ jobs:
           fi
 
       # -----------------------
-      # 時間外スキップ（安全版）
+      # ② 以下すべて“そのまま”＋if追加
       # -----------------------
-      - name: Stop if out of time
-        if: steps.time.outputs.time_ok != 'true'
-        run: |
-          echo "========================"
-          echo "⛔ SKIPPED"
-          echo "JST 15:45 - 21:15 only"
-          echo "========================"
-          exit 0
 
-      # -----------------------
-      # 以下そのまま
-      # -----------------------
       - name: Checkout
+        if: steps.time.outputs.time_ok == 'true'
         uses: actions/checkout@v4
 
       - name: Set up Python
+        if: steps.time.outputs.time_ok == 'true'
         uses: actions/setup-python@v5
         with:
           python-version: "3.11"
 
       - name: Install dependencies
+        if: steps.time.outputs.time_ok == 'true'
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
       - name: Install Chrome
+        if: steps.time.outputs.time_ok == 'true'
         run: |
           wget https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb
           sudo apt-get update
           sudo apt-get install -y ./google-chrome-stable_current_amd64.deb
 
       - name: Create output
+        if: steps.time.outputs.time_ok == 'true'
         run: mkdir -p output
 
       - name: Run scraper
+        if: steps.time.outputs.time_ok == 'true'
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
@@ -96,6 +91,7 @@ jobs:
           python scraper.py "$MODE"
 
       - name: Commit CSV
+        if: steps.time.outputs.time_ok == 'true'
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
@@ -105,7 +101,7 @@ jobs:
           git push
 
       - name: Upload artifacts
-        if: always()
+        if: steps.time.outputs.time_ok == 'true'
         uses: actions/upload-artifact@v4
         with:
           name: output
