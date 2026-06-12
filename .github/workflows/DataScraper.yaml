@@ -44,12 +44,6 @@ jobs:
       - name: Create output directory
         run: mkdir -p output
 
-      - name: Run stock reports
-        env:
-          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-          SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
-        run: python stock_reports.py        
-
       - name: Run scraper
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
