@@ -27,15 +27,6 @@ jobs:
   scrape:
     runs-on: ubuntu-latest
 
-    # =========================
-    # ✔ ここが本体：時間制御（最重要）
-    # =========================
-    if: ${{ 
-      github.event_name != 'schedule' || 
-      (github.event_name == 'schedule' && 
-        (format('{0}', github.event.schedule) == '' || true))
-    }}
-
     steps:
       # -----------------------
       # 時間判定（JST）
@@ -55,19 +46,19 @@ jobs:
           fi
 
       # -----------------------
-      # 時間外ならここでジョブ終了
+      # 時間外スキップ（安全版）
       # -----------------------
       - name: Stop if out of time
         if: steps.time.outputs.time_ok != 'true'
         run: |
           echo "========================"
-          echo "⛔ SKIPPED (OUT OF TIME)"
+          echo "⛔ SKIPPED"
           echo "JST 15:45 - 21:15 only"
           echo "========================"
           exit 0
 
       # -----------------------
-      # 以下：既存処理そのまま
+      # 以下そのまま
       # -----------------------
       - name: Checkout
         uses: actions/checkout@v4
