@@ -30,15 +30,22 @@ jobs:
             echo "⛔ 実行時間外"
           fi
 
+          # -----------------------
+          # 🧪 強制スキップ（テスト用）
+          # 本番ではこの1行を削除
+          # -----------------------
+          echo "time_ok=false" >> "$GITHUB_OUTPUT"
+          echo "🧪 FORCE SKIP ACTIVE"
+
       # -----------------------
-      # 時間外ならここで停止
+      # 時間外 or 強制スキップならここで終了
       # -----------------------
-      - name: Stop if out of time
+      - name: Stop if skipped
         if: steps.time.outputs.time_ok != 'true'
         run: |
           echo "========================"
           echo "⛔ SKIPPED"
-          echo "理由: 15:45〜21:15 JST以外"
+          echo "（時間外 or 強制スキップ）"
           echo "========================"
           exit 0
 
