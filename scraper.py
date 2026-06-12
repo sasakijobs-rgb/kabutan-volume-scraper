@@ -4,11 +4,11 @@
 # →last_data20.csvと今回の１ページ目を比較して重複は中止）主に土日祝は中止
 # →cleanup.py
 # (ファイルが150個以上は削除)
-# →data2csv.py
-# (株探のモバイル版からデータを取得）
 #  →last_data20.csvを更新(data2csvが正常終了時のみ)
 # →nikkei_vi_data.csvを更新
 # →nikkei_avg_data.csvを更新
+# →data2csv.py
+# (株探のモバイル版からデータを取得）
 # →supabaseへcsvを反映する
 # =========================
 import os
