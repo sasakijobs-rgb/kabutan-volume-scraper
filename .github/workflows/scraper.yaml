@@ -17,9 +17,9 @@ on:
           - nikkei_vi
           - nikkei_avg
           - data2csv
-          - stock_reports
-          - supabase
-
+          - db_stock_reports
+          - db_trading_value
+  
 permissions:
   contents: write
 
