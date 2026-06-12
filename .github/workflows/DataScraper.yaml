@@ -2,8 +2,6 @@ name: DataScraper
 
 on:
   workflow_dispatch:
-  schedule:
-  - cron: "0 7 * * *"  # 16:00日本時間
 
 permissions:
   contents: write
