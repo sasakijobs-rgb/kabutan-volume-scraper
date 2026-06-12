@@ -3,22 +3,7 @@ name: scraper
 on:
   schedule:
     - cron: "0 7 * * *"
-
   workflow_dispatch:
-    inputs:
-      mode:
-        description: "実行モード"
-        required: false
-        default: "normal"
-        type: choice
-        options:
-          - normal
-          - cleanup
-          - nikkei_vi
-          - nikkei_avg
-          - data2csv
-          - db_stock_reports
-          - db_trading_value
 
 permissions:
   contents: write
@@ -29,7 +14,7 @@ jobs:
 
     steps:
       # -----------------------
-      # 時間判定（共通）
+      # 時間判定（JST）
       # -----------------------
       - name: Time check
         id: time
@@ -39,80 +24,58 @@ jobs:
 
           if [ "$NOW" -ge 1545 ] && [ "$NOW" -le 2115 ]; then
             echo "time_ok=true" >> "$GITHUB_OUTPUT"
+            echo "✔ 実行時間内"
           else
             echo "time_ok=false" >> "$GITHUB_OUTPUT"
+            echo "⛔ 実行時間外"
           fi
 
       # -----------------------
-      # テストモード判定
+      # 時間外ならここで停止
       # -----------------------
-      - name: Mode check
-        id: mode
-        run: |
-          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            echo "test=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "test=false" >> "$GITHUB_OUTPUT"
-          fi
-
-      # -----------------------
-      # テスト時：ログだけ
-      # -----------------------
-      - name: Test mode log only
-        if: steps.mode.outputs.test == 'true'
+      - name: Stop if out of time
+        if: steps.time.outputs.time_ok != 'true'
         run: |
           echo "========================"
-          echo "🧪 TEST MODE"
-          echo "Time OK: ${{ steps.time.outputs.time_ok }}"
-          echo "（ここではスクレイピングしません）"
+          echo "⛔ SKIPPED"
+          echo "理由: 15:45〜21:15 JST以外"
           echo "========================"
+          exit 0
 
       # -----------------------
-      # 本番処理（時間OKのときだけ）
+      # 本番処理（時間内のみ）
       # -----------------------
       - name: Checkout
-        if: steps.mode.outputs.test != 'true' && steps.time.outputs.time_ok == 'true'
         uses: actions/checkout@v4
 
       - name: Set up Python
-        if: steps.mode.outputs.test != 'true' && steps.time.outputs.time_ok == 'true'
         uses: actions/setup-python@v5
         with:
           python-version: "3.11"
 
       - name: Install dependencies
-        if: steps.mode.outputs.test != 'true' && steps.time.outputs.time_ok == 'true'
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
       - name: Install Chrome
-        if: steps.mode.outputs.test != 'true' && steps.time.outputs.time_ok == 'true'
         run: |
           wget https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb
           sudo apt-get update
           sudo apt-get install -y ./google-chrome-stable_current_amd64.deb
 
       - name: Create output
-        if: steps.mode.outputs.test != 'true' && steps.time.outputs.time_ok == 'true'
         run: mkdir -p output
 
       - name: Run scraper
-        if: steps.mode.outputs.test != 'true' && steps.time.outputs.time_ok == 'true'
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
         run: |
-          MODE="${{ github.event.inputs.mode }}"
-          if [ -z "$MODE" ]; then
-            MODE="normal"
-          fi
-
-          echo "[MODE] $MODE"
-          python scraper.py "$MODE"
+          echo "[MODE] normal"
+          python scraper.py normal
 
       - name: Commit CSV
-        if: steps.mode.outputs.test != 'true' && steps.time.outputs.time_ok == 'true'
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
@@ -121,11 +84,7 @@ jobs:
           git diff --staged --quiet || git commit -m "Update CSV"
           git push
 
-      # -----------------------
-      # アーティファクト（本番のみ）
-      # -----------------------
       - name: Upload artifacts
-        if: steps.mode.outputs.test != 'true' && steps.time.outputs.time_ok == 'true'
         uses: actions/upload-artifact@v4
         with:
           name: output
