@@ -10,7 +10,7 @@ from check_update import check_update, update_last
 RUN_CLEANUP = True
 RUN_NIKKEI_VI = True
 RUN_NIKKEI_AVG = True
-RUN_DATA2CSV = True
+RUN_CSV_TRADING_VALUE = True
 RUN_DB_STOCK_REPORTS = True
 RUN_DB_TRADING_VALUE = True
 
@@ -47,8 +47,8 @@ def step_nikkei_vi():
 def step_nikkei_avg():
     return run_py("nikkei_avg_data.py")
 
-def step_data2csv():
-    return run_py("data2csv.py")
+def step_csv_trading_value():
+    return run_py("CSV_trading_value.py")
 
 def step_db_stock_reports():
     return run_py("DB_stock_reports.py")
@@ -80,11 +80,12 @@ def run_full():
     if RUN_NIKKEI_AVG:
         step_nikkei_avg()
 
-    # 4. data2csv（ここ重要：ここでデータ生成）
-    if RUN_DATA2CSV:
-        ok = step_data2csv()
+    # 4. CSV trading value
+    if RUN_CSV_TRADING_VALUE:
+        ok = step_csv_trading_value()
+
         if not ok:
-            print("[ABORT] data2csv失敗 → 後続停止")
+            print("[ABORT] CSV_trading_value失敗 → 後続停止")
             return
 
         # 成功時のみ last 更新
@@ -122,10 +123,10 @@ def main():
         step_nikkei_avg()
         return
 
-    if mode == "data2csv":
-        step_data2csv()
+    if mode == "csv_trading_value":
+        step_csv_trading_value()
         return
-
+    
     if mode == "db_stock_reports":
         step_db_stock_reports()
         return
