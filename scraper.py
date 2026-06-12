@@ -69,18 +69,6 @@ def main():
             print("[ABORT] cleanup失敗")
             return
 
-
-        # =========================
-        # STEP 2
-        # =========================
-        #print("[STEP 2/4] data2csv.py 実行")
-
-        #if not run_py("data2csv.py"):
-        #    print("[ABORT] data2csv失敗")
-        #    return
-        #print("[STEP 2.5] last_data20.csv 更新（正常終了）")
-        #update_last()
-
         # =========================
         # STEP 3
         # =========================
@@ -96,6 +84,17 @@ def main():
 
         if not run_py("nikkei_avg_data.py"):
             print("[WARN] nikkei_avg_data.py失敗（継続）")
+
+        # =========================
+        # STEP 2
+        # =========================
+        print("[STEP 2/4] data2csv.py 実行")
+
+        if not run_py("data2csv.py"):
+           print("[ABORT] data2csv失敗")
+           return
+        print("[STEP 2.5] last_data20.csv 更新（正常終了）")
+        update_last()
 
         # =========================
         # STEP 4
