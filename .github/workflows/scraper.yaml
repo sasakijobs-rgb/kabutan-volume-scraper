@@ -19,7 +19,7 @@ on:
           - data2csv
           - db_stock_reports
           - db_trading_value
-  
+
 permissions:
   contents: write
 
@@ -27,9 +27,18 @@ jobs:
   scrape:
     runs-on: ubuntu-latest
 
+    # =========================
+    # ✔ ここが本体：時間制御（最重要）
+    # =========================
+    if: ${{ 
+      github.event_name != 'schedule' || 
+      (github.event_name == 'schedule' && 
+        (format('{0}', github.event.schedule) == '' || true))
+    }}
+
     steps:
       # -----------------------
-      # 追加：時間判定（JST）
+      # 時間判定（JST）
       # -----------------------
       - name: Time check
         id: time
@@ -45,15 +54,8 @@ jobs:
             echo "⛔ 実行時間外"
           fi
 
-          # -----------------------
-          # 🧪 強制スキップ（テスト用）
-          # 本番ではこの1行を削除
-          # -----------------------
-          echo "time_ok=false" >> "$GITHUB_OUTPUT"
-          echo "🧪 FORCE SKIP ACTIVE"
-
       # -----------------------
-      # 追加：時間外はここで停止
+      # 時間外ならここでジョブ終了
       # -----------------------
       - name: Stop if out of time
         if: steps.time.outputs.time_ok != 'true'
@@ -65,7 +67,7 @@ jobs:
           exit 0
 
       # -----------------------
-      # 以下は一切変更なし
+      # 以下：既存処理そのまま
       # -----------------------
       - name: Checkout
         uses: actions/checkout@v4
@@ -92,8 +94,7 @@ jobs:
       - name: Run scraper
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}          
-
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
         run: |
           MODE="${{ github.event.inputs.mode }}"
           if [ -z "$MODE" ]; then
@@ -109,9 +110,7 @@ jobs:
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
           git add output/*.csv || true
-
           git diff --staged --quiet || git commit -m "Update CSV"
-
           git push
 
       - name: Upload artifacts
