@@ -54,7 +54,7 @@ def step_db_stock_reports():
     return run_py("DB_stock_reports.py")
 
 def step_db_trading_value():
-    return run_py("DB_Trading_value.py")
+    return run_py("DB_trading_value.py")
 
 # =========================
 # フル実行
