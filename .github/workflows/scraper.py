@@ -1,4 +1,4 @@
-name: DataScraper
+name: scraper
 
 on:
   workflow_dispatch:
