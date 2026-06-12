@@ -68,6 +68,7 @@ def main():
         if not run_py("cleanup.py"):
             print("[ABORT] cleanup失敗")
             return
+        print("[STEP 1] cleanup （正常終了）")
 
         # =========================
         # STEP 2
@@ -76,6 +77,7 @@ def main():
 
         if not run_py("nikkei_vi_data.py"):
            print("[WARN] nikkei_vi_data.py失敗（継続）")
+        print("[STEP 2] nikkei_vi_data （正常終了）")
 
         # =========================
         # STEP 2.5
@@ -84,16 +86,17 @@ def main():
 
         if not run_py("nikkei_avg_data.py"):
             print("[WARN] nikkei_avg_data.py失敗（継続）")
+        print("[STEP 2.5] nikkei_avg_data （正常終了）")
 
         # =========================
         # STEP 3
         # =========================
-        print("[STEP 3/4] data2csv.py 実行")
+        print("[STEP 3/4] scraper.py 実行")
 
-        if not run_py("data2csv.py"):
-           print("[ABORT] data2csv失敗")
+        if not run_py("scraper.py"):
+           print("[ABORT] scraper 失敗")
            return
-        print("[STEP 3.5] data2csv.csv 更新（正常終了）")
+        print("[STEP 3] scraper （正常終了）")
         update_last()
 
         # =========================
