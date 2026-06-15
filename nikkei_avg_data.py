@@ -125,7 +125,7 @@ def main():
         save_merged(data)
         save_today(data)
 
-        print("nikkei_abg_data_saved")
+        print("nikkei_avg_data_saved")
 
     except Exception as e:
         print("error:", e)
