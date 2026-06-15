@@ -98,7 +98,7 @@ def run_full():
     
     print("\n===== FULL RUN END =====")
 
-    # 成功時のみ last 更新
+    # 成功時のみ last 更新(必ず処理の最後に更新すること)
     update_last()
 
 # =========================
