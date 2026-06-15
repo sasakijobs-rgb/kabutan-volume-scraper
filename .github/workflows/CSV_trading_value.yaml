@@ -1,0 +1,44 @@
+name: CSV Trading Value
+
+on:
+  workflow_dispatch:
+
+  schedule:
+    # 平日17:00 JST = 08:00 UTC
+    - cron: "0 8 * * 1-5"
+
+jobs:
+  trading-value:
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install packages
+        run: |
+          python -m pip install --upgrade pip
+          pip install requests beautifulsoup4
+
+      - name: Run script
+        run: |
+          python CSV_trading_value.py
+
+      - name: Upload CSV and Log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: trading_value_output
+          path: |
+            output/*.csv
+            output/*.log
+          if-no-files-found: warn
+          retention-days: 30
