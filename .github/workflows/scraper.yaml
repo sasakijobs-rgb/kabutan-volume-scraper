@@ -2,10 +2,11 @@ name: scraper
 
 on:
   schedule:
-    - cron: "0 1 * * *"
-    - cron: "0 2 * * *"
-    - cron: "0 7 * * *"
-
+    - cron: "0 7 * * *"   # JST 16:00
+    - cron: "0 13 * * *"  # JST 22:00
+    - cron: "0 19 * * *"  # JST 04:00
+    - cron: "0 1 * * *"   # JST 10:00
+  
   workflow_dispatch:
     inputs:
       mode:
