@@ -88,9 +88,6 @@ def run_full():
             print("[ABORT] CSV_trading_value失敗 → 後続停止")
             return
 
-        # 成功時のみ last 更新
-        update_last()
-
     # 5. stock reports
     if RUN_DB_STOCK_REPORTS:
         step_db_stock_reports()
@@ -101,6 +98,8 @@ def run_full():
     
     print("\n===== FULL RUN END =====")
 
+    # 成功時のみ last 更新
+    update_last()
 
 # =========================
 # エントリポイント
