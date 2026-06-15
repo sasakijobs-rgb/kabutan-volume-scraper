@@ -19,6 +19,7 @@ on:
           - cleanup
           - nikkei_vi
           - nikkei_avg
+          - csv_trading_value
           - db_stock_reports
           - db_trading_value
 
