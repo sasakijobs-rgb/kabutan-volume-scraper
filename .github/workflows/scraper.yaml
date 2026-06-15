@@ -96,27 +96,44 @@ jobs:
         if: steps.time.outputs.time_ok == 'true'
         run: |
           git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+      
           git add output/*.csv || true
-
+      
           if git diff --cached --quiet; then
             echo "No changes"
             exit 0
           fi
-
+      
           git commit -m "Update CSV"
-
+      
+          # ★ push失敗時だけリトライ
           for i in 1 2 3
           do
-            git push origin HEAD:main && break
-
-            echo "Push failed. Retry $i"
-
+            if git push origin HEAD:main; then
+              echo "Push success"
+              exit 0
+            fi
+      
+            echo "Push failed (attempt $i)"
+      
+            git fetch origin main
+            git reset --hard origin/main
+      
+            git add output/*.csv || true
+      
+            if git diff --cached --quiet; then
+              echo "Nothing to commit after sync"
+              exit 0
+            fi
+      
+            git commit -m "Update CSV (retry $i)"
+      
             sleep 10
-
-            git pull --ff-only origin main || true
-            git rebase origin/main || true
           done
+      
+          echo "Failed after retries"
+          exit 1
+
 
           
