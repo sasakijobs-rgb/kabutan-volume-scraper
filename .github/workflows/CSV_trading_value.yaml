@@ -3,10 +3,6 @@ name: CSV Trading Value
 on:
   workflow_dispatch:
 
-  schedule:
-    # 平日17:00 JST = 08:00 UTC
-    - cron: "0 8 * * 1-5"
-
 jobs:
   trading-value:
     runs-on: ubuntu-latest
