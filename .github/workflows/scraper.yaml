@@ -97,23 +97,25 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-
-          git add output/*.csv || true      
-
+      
+          git add output/*.csv || true
+      
           if git diff --staged --quiet; then
             echo "No changes"
             exit 0
           fi
-
+      
           git commit -m "Update CSV"
+      
+          for i in 1 2 3
+          do
+            git pull --rebase origin main && \
+            git push origin main && break
+      
+            echo "Retry $i"
+            sleep 10
+          done
 
-            for i in 1 2 3
-            do
-              git pull --rebase origin main && \
-              git push origin main && break
 
-      echo "Retry $i"
-      sleep 10
-    done
 
-    
+          
