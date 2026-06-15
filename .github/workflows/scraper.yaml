@@ -98,13 +98,22 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
-          git add output/*.csv || true
-          git diff --staged --quiet || git commit -m "Update CSV"
-          git push
+          git add output/*.csv || true      
 
-      - name: Upload artifacts
-        if: steps.time.outputs.time_ok == 'true'
-        uses: actions/upload-artifact@v4
-        with:
-          name: output
-          path: output/
+          if git diff --staged --quiet; then
+            echo "No changes"
+            exit 0
+          fi
+
+          git commit -m "Update CSV"
+
+          for i in 1 2 3
+          do
+            git pull --rebase origin main && \
+            git push origin main && break
+
+      echo "Retry $i"
+      sleep 10
+    done
+
+    
