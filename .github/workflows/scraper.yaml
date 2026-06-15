@@ -107,10 +107,10 @@ jobs:
 
           git commit -m "Update CSV"
 
-          for i in 1 2 3
-          do
-            git pull --rebase origin main && \
-            git push origin main && break
+            for i in 1 2 3
+            do
+              git pull --rebase origin main && \
+              git push origin main && break
 
       echo "Retry $i"
       sleep 10
