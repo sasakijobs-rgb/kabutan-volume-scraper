@@ -35,35 +35,55 @@ jobs:
       # ① 時間判定＆last20.csvが処理済ならSKIP
       # -----------------------
       - name: Time + CSV check
-        id: gate
+
+      # -----------------------
+      # ① 時間 + CSV更新日チェック
+      # -----------------------
+      - name: Time check
+        id: time
         run: |
           NOW=$(TZ=Asia/Tokyo date +%H%M)
-          FILE="output/last_data20.csv"
           TODAY=$(TZ=Asia/Tokyo date +%Y-%m-%d)
-
+          FILE="output/last_data20.csv"
+      
           echo "[INFO] JST time = $NOW"
-
+          echo "[INFO] TODAY = $TODAY"
+      
+          # -----------------------
           # 時間判定
+          # -----------------------
           if [ "$NOW" -lt 1545 ] || [ "$NOW" -gt 2115 ]; then
+            echo "time_ok=false" >> "$GITHUB_OUTPUT"
             echo "SKIP: time out"
             exit 0
           fi
-
-          # ファイルチェック
+      
+          # -----------------------
+          # CSV更新日チェック
+          # -----------------------
           if [ -f "$FILE" ]; then
             FILE_DATE=$(TZ=Asia/Tokyo stat -c %y "$FILE" | cut -d' ' -f1)
-
-            echo "[INFO] FILE_DATE=$FILE_DATE"
-            echo "[INFO] TODAY=$TODAY"
-
+      
+            echo "[INFO] FILE_DATE = $FILE_DATE"
+      
             if [ "$FILE_DATE" = "$TODAY" ]; then
+              echo "time_ok=false" >> "$GITHUB_OUTPUT"
               echo "SKIP: already updated today"
               exit 0
             fi
           fi
-
+      
+          # -----------------------
+          # 実行OK
+          # -----------------------
+          echo "time_ok=true" >> "$GITHUB_OUTPUT"
           echo "OK: run scraper"
+
+
           
+      # -----------------------
+      # 通常処理(セットアップ)
+      # -----------------------
       - name: Checkout
         if: steps.time.outputs.time_ok == 'true'
         uses: actions/checkout@v4
