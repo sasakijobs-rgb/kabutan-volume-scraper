@@ -2,6 +2,9 @@ name: scraper
 
 on:
   schedule:
+    - cron: "0 1 * * *"   # JST 7:00
+    - cron: "0 3 * * *"   # JST 10:00
+    - cron: "0 5 * * *"   # JST 13:00
     - cron: "0 7 * * *"   # JST 16:00
   
   workflow_dispatch:
