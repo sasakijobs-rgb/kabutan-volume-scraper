@@ -157,7 +157,10 @@ def insert_to_supabase(df):
 
         batch = data[i:i+BATCH_SIZE]
 
-        supabase.table(TABLE_NAME).insert(batch).execute()
+        supabase.table(TABLE_NAME).upsert(
+          batch,
+          on_conflict="ymd,code"
+        ).execute()
 
         print(
             f"[INFO] "
