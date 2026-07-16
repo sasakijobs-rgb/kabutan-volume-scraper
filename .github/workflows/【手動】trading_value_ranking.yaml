@@ -1,4 +1,4 @@
-name: 【手動】_trading_value_ranking
+name: 【手動】trading_value_ranking
 
 on:
   workflow_dispatch:
